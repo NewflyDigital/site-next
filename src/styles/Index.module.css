@@ -1,0 +1,50 @@
+.backgroundBanner {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 9rem 2rem 7rem;
+  background:
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(132, 56, 255, 0.18),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 15% 80%,
+      rgba(87, 42, 161, 0.12),
+      transparent 35%
+    ),
+    #0f0f12;
+}
+
+.interno {
+  width: 100%;
+  max-width: 90rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 5rem;
+  position: relative;
+  z-index: 5;
+}
+
+.box {
+  width: 100%;
+  max-width: 40rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.background {
+  width: 100%;
+  background: #0f0f12;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 7rem 0rem;
+  position: relative;
+}
