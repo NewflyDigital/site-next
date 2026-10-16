@@ -20,13 +20,12 @@ const navLinks = [
   { label: "Quem somos", href: "/quem-somos" },
   { label: "Contato", href: "/contato" },
 ];
-
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5a72d]";
+  "inline-flex items-center justify-center gap-2 rounded-sm border px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5a72d]";
 
-const buttonPrimary = `${buttonBase} bg-[#d5a72d] text-[#111519] hover:bg-[#e5bd51]`;
+const buttonPrimary = `${buttonBase} border-[#d5a72d] bg-[#d5a72d] text-[#111519] hover:bg-transparent hover:text-[#d5a72d]`;
 
-const buttonGlass = `${buttonBase} border border-white/30 bg-white/5 text-white hover:border-[#d5a72d] hover:text-[#d5a72d]`;
+const buttonGlass = `${buttonBase} border-white/50 bg-transparent text-white hover:border-[#d5a72d] hover:bg-[#d5a72d] hover:text-[#111519]`;
 
 export default function Menu() {
   const pathname = usePathname();
@@ -221,16 +220,16 @@ export default function Menu() {
           </Link>
 
           <Link
-            href="/pos-vendas"
+            href="/pos-venda"
             onMouseEnter={() => {
               setOpenLine(null);
               setPreviewSlug(null);
             }}
             className={buttonGlass}
           >
-            Pós-vendas
+            Pós-venda
           </Link>
-
+          {/*
           <button
             type="button"
             aria-label="Pesquisar produtos"
@@ -243,6 +242,7 @@ export default function Menu() {
           >
             {searchOpen ? <X size={20} /> : <Search size={20} />}
           </button>
+          */}
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -481,11 +481,11 @@ export default function Menu() {
               )}
 
               <Link
-                href="/pos-vendas"
+                href="/pos-venda"
                 onClick={closeMenus}
                 className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors"
               >
-                Pós-vendas
+                Pós-venda
               </Link>
 
               <Link
@@ -504,6 +504,7 @@ export default function Menu() {
                 Solicitar orçamento <ArrowRight size={16} />
               </Link>
 
+              {/*
               <form onSubmit={handleSearchSubmit} className="mt-6 flex gap-2">
                 <label htmlFor="mobile-menu-search" className="sr-only">
                   Pesquisar produtos
@@ -526,6 +527,7 @@ export default function Menu() {
                   <Search size={17} />
                 </button>
               </form>
+              */}
             </nav>
 
             <p className="mt-auto pt-10 text-xs text-white/40">

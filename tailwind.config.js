@@ -11,7 +11,7 @@ module.exports = {
         foreground: "var(--foreground)",
         primary: "var(--primary)",
         "primary-foreground": "var(--primary-foreground)",
-        secondary: "#28B3C7",
+        secondary: "#fd0c1c",
         "secondary-foreground": "var(--secondary-foreground)",
         muted: "var(--muted)",
         "muted-foreground": "var(--muted-foreground)",

@@ -215,40 +215,46 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="mt-14 grid gap-px bg-border md:grid-cols-2">
+            <div className="mt-14 grid w-full grid-cols-1 gap-px overflow-hidden bg-border sm:grid-cols-2 lg:grid-cols-4">
               {lines.map(([slug, line], index) => (
                 <Link
                   key={slug}
                   href={`/produtos/${slug}`}
-                  className="group relative min-h-[420px] overflow-hidden bg-industrial md:min-h-[520px]"
+                  className="group relative block h-[480px] min-w-0 overflow-hidden bg-industrial sm:h-[520px] lg:h-[560px] xl:h-[600px]"
                 >
+                  {/* Imagem: ocupa todo o card e se ajusta ao espaço */}
                   <img
                     src={line.image}
                     alt={`${line.label} em operação`}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                     width="1200"
                     height="1500"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-industrial via-industrial/15 to-transparent" />
+                  {/* Contraste sobre a imagem */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-industrial/80 via-industrial/10 to-transparent" />
 
-                  <div className="absolute inset-x-0 bottom-0 p-7 text-surface-contrast lg:p-10">
-                    <p className="font-mono text-xs text-primary">
+                  {/* Faixa vermelha: sobe até 90% no hover */}
+                  <div className="absolute inset-x-0 bottom-0 flex h-[42%] flex-col bg-primary p-5 text-primary-foreground transition-[height] duration-500 ease-out group-hover:h-[90%] sm:p-6 lg:p-5 xl:p-6">
+                    <p className="shrink-0 font-mono text-xs opacity-80">
                       {String(index + 1).padStart(2, "0")}
                     </p>
 
-                    <h3 className="mt-3 font-display text-3xl uppercase lg:text-4xl">
+                    <h3 className="mt-3 shrink-0 font-display text-xl uppercase leading-tight sm:text-2xl lg:text-xl xl:text-2xl">
                       {line.label}
                     </h3>
 
-                    <p className="mt-3 max-w-md text-surface-contrast/65">
+                    <p className="mt-3 line-clamp-4 overflow-hidden text-sm leading-relaxed text-primary-foreground/85">
                       {line.description}
                     </p>
 
-                    <span className="mt-6 flex items-center gap-2 text-xs font-semibold uppercase transition-all group-hover:gap-4">
+                    <span className="mt-auto flex shrink-0 items-center gap-2 pt-4 text-xs font-semibold uppercase tracking-wide">
                       Conheça o equipamento
-                      <ArrowRight size={16} />
+                      <ArrowRight
+                        size={16}
+                        className="shrink-0 transition-transform duration-300 group-hover:translate-x-2"
+                      />
                     </span>
                   </div>
                 </Link>
