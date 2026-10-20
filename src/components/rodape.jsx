@@ -126,7 +126,7 @@ export default function Rodape() {
         </div>
 
         {/* Crédito */}
-        <div className="mt-6 flex items-center justify-center gap-2 border-t border-surface-contrast/10 pt-5 text-xs opacity-45 sm:justify-end">
+        <div className="mt-6 flex items-center justify-center gap-2 border-t border-surface-contrast/10 pt-5 text-xs opacity-45">
           <span>Desenvolvido por</span>
 
           <a
@@ -136,11 +136,7 @@ export default function Rodape() {
             className="transition-opacity hover:opacity-80"
             aria-label="Newfly"
           >
-            <img
-              src="/static/images/newfly-branco.png"
-              alt="Newfly"
-              className="w-20"
-            />
+            <img src="/newfly.png" alt="Newfly" className="w-20" />
           </a>
         </div>
       </div>

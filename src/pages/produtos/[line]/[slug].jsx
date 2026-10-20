@@ -5,6 +5,35 @@ import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
 
+function getYouTubeEmbedUrl(value) {
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+
+    if (url.hostname === "youtu.be") {
+      return `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}`;
+    }
+
+    if (
+      url.hostname.includes("youtube.com") ||
+      url.hostname.includes("youtube-nocookie.com")
+    ) {
+      const id =
+        url.searchParams.get("v") ||
+        url.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1];
+
+      if (id) {
+        return `https://www.youtube-nocookie.com/embed/${id}`;
+      }
+    }
+  } catch {
+    // Se não for uma URL, considera o valor como ID do vídeo.
+  }
+
+  return `https://www.youtube-nocookie.com/embed/${value}`;
+}
+
 export default function ProdutoPage({ product }) {
   if (!product) return null;
 
@@ -193,43 +222,141 @@ export default function ProdutoPage({ product }) {
 
         <section
           id="especificacoes"
-          className="scroll-mt-36 px-5 py-24 lg:px-10 lg:py-32"
+          className="scroll-mt-36 px-5 py-20 lg:px-10 lg:py-28"
         >
           <div className="mx-auto max-w-[1480px]">
-            <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+            {/* Cabeçalho das especificações */}
+            <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
               <div>
                 <p className="eyebrow text-primary">Informação técnica</p>
-                <h2 className="mt-5 font-display text-4xl uppercase">
+
+                <h2 className="mt-5 font-display text-4xl uppercase sm:text-5xl">
                   Especificações
                 </h2>
+
+                <p className="mt-5 max-w-md leading-relaxed text-muted-foreground">
+                  Confira os dados técnicos e as informações necessárias para
+                  avaliar a aplicação do equipamento.
+                </p>
               </div>
 
               <div className="border-t-2 border-foreground">
-                {[
-                  "Capacidade",
-                  "Alcance",
-                  "Peso",
-                  "Configuração",
-                  "Aplicação",
-                ].map((label) => (
-                  <div
-                    key={label}
-                    className="grid grid-cols-[0.8fr_1.2fr] gap-4 border-b border-border py-5"
-                  >
-                    <span className="font-semibold uppercase">{label}</span>
-                    <span className="text-muted-foreground">
-                      Consulte a equipe NEXT
-                    </span>
-                  </div>
-                ))}
-                <p className="mt-6 text-sm text-muted-foreground">
-                  Os dados serão publicados após validação da ficha técnica
-                  oficial deste modelo.
-                </p>
+                {(
+                  product.specifications ?? [
+                    { label: "Capacidade", value: "" },
+                    { label: "Alcance", value: "" },
+                    { label: "Peso", value: "" },
+                    { label: "Configuração", value: "" },
+                    { label: "Aplicação", value: "" },
+                  ]
+                )
+                  .filter((spec) => spec.value)
+                  .map((spec) => (
+                    <div
+                      key={spec.label}
+                      className="grid grid-cols-[0.8fr_1.2fr] gap-4 border-b border-border py-5 sm:gap-8"
+                    >
+                      <span className="font-semibold uppercase">
+                        {spec.label}
+                      </span>
+
+                      <span className="text-muted-foreground">
+                        {spec.value}
+                      </span>
+                    </div>
+                  ))}
+
+                {!product.specifications?.some((spec) => spec.value) && (
+                  <p className="py-5 text-sm text-muted-foreground">
+                    Consulte nossa equipe para obter as especificações técnicas
+                    deste modelo.
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Gráfico de carga: faixa vermelha e imagem */}
+            {(product.loadChart || product.loadChartPdf) && (
+              <div className="mt-16 lg:mt-20">
+                <div className="flex w-full flex-col gap-4 bg-primary px-5 py-6 text-white sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+                  <div className="flex items-center gap-4">
+                    <span
+                      className="flex size-12 shrink-0 items-center justify-center border border-white/40 text-2xl"
+                      aria-hidden="true"
+                    >
+                      ↗
+                    </span>
+
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+                        Informação técnica
+                      </p>
+
+                      <h3 className="mt-1 font-display text-xl uppercase sm:text-2xl">
+                        Gráfico de carga
+                      </h3>
+                    </div>
+                  </div>
+
+                  {product.loadChartPdf && (
+                    <a
+                      href={product.loadChartPdf}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-3 border border-white/60 px-5 py-3 text-sm font-bold uppercase text-white transition-colors hover:bg-white hover:text-primary sm:w-auto"
+                    >
+                      Baixar gráfico
+                      <span aria-hidden="true">↓</span>
+                    </a>
+                  )}
+                </div>
+
+                {product.loadChart && (
+                  <div className="flex w-full items-center justify-center border border-border bg-white p-4 sm:p-8 lg:p-12">
+                    <img
+                      src={product.loadChart}
+                      alt={`Gráfico de carga do equipamento ${product.name}`}
+                      loading="lazy"
+                      className="h-auto max-h-[1000px] w-full object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
+
+        {/* Vídeo do produto */}
+        {product.videoUrl && (
+          <section className="px-5 py-20 lg:px-10 lg:py-28">
+            <div className="mx-auto max-w-[1480px]">
+              <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
+                <div>
+                  <p className="eyebrow text-primary">Na prática</p>
+                  <h2 className="mt-5 font-display text-4xl uppercase leading-tight sm:text-5xl">
+                    Conheça o equipamento em ação.
+                  </h2>
+                </div>
+
+                <p className="max-w-2xl leading-relaxed text-muted-foreground">
+                  Veja mais detalhes sobre o equipamento, suas aplicações e como
+                  ele pode integrar a sua operação.
+                </p>
+              </div>
+
+              <div className="relative mt-10 aspect-video w-full overflow-hidden bg-industrial">
+                <iframe
+                  src={getYouTubeEmbedUrl(product.videoUrl)}
+                  title={`Vídeo do equipamento ${product.name}`}
+                  className="absolute inset-0 size-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
         {related.length > 0 && (
           <section

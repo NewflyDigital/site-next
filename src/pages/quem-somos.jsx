@@ -157,6 +157,41 @@ export default function QuemSomos() {
           </div>
         </section>
 
+        {/* VÍDEO INSTITUCIONAL */}
+        <section className="bg-background px-5 py-24 lg:px-10 lg:py-32">
+          <div className="mx-auto max-w-[1480px]">
+            <div className="grid items-end gap-8 lg:grid-cols-2 lg:gap-16">
+              <div>
+                <p className="eyebrow text-primary">NEXT em movimento</p>
+
+                <h2 className="mt-5 font-display text-4xl uppercase leading-tight text-foreground sm:text-5xl lg:text-6xl">
+                  Conheça nossa estrutura e nosso trabalho.
+                </h2>
+              </div>
+
+              <p className="max-w-xl leading-relaxed text-muted-foreground lg:justify-self-end">
+                Engenharia, tecnologia e pessoas trabalhando juntas para
+                desenvolver soluções que atendam às necessidades de cada
+                operação.
+              </p>
+            </div>
+
+            <div className="mt-12 overflow-hidden bg-industrial">
+              <div className="aspect-video w-full">
+                <iframe
+                  className="h-full w-full"
+                  src="https://www.youtube-nocookie.com/embed/3TOzM23TuZ0"
+                  title="Vídeo institucional da NEXT Implementos"
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* MISSÃO, VISÃO E VALORES */}
         <section className="bg-industrial px-5 py-24 text-surface-contrast lg:px-10 lg:py-32">
           <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-3 lg:gap-16">

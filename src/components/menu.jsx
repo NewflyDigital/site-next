@@ -21,11 +21,11 @@ const navLinks = [
   { label: "Contato", href: "/contato" },
 ];
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-sm border px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5a72d]";
+  "inline-flex items-center justify-center gap-2 rounded-sm border px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d90820]";
 
-const buttonPrimary = `${buttonBase} border-[#d5a72d] bg-[#d5a72d] text-[#111519] hover:bg-transparent hover:text-[#d5a72d]`;
+const buttonPrimary = `${buttonBase} border-[#d90820] bg-[#d90820] text-[#111519] hover:bg-transparent hover:text-[#d90820]`;
 
-const buttonGlass = `${buttonBase} border-white/50 bg-transparent text-white hover:border-[#d5a72d] hover:bg-[#d5a72d] hover:text-[#111519]`;
+const buttonGlass = `${buttonBase} border-white/50 bg-transparent text-white hover:border-[#d90820] hover:bg-[#d90820] hover:text-[#111519]`;
 
 export default function Menu() {
   const pathname = usePathname();
@@ -170,8 +170,8 @@ export default function Menu() {
           <Link
             href="/"
             onClick={closeMenus}
-            className={`text-sm transition-colors hover:text-[#d5a72d] ${
-              pathname === "/" ? "text-[#d5a72d]" : "text-white"
+            className={`text-sm transition-colors hover:text-[#d90820] ${
+              pathname === "/" ? "text-[#d90820]" : "text-white"
             }`}
           >
             Home
@@ -180,8 +180,8 @@ export default function Menu() {
           <Link
             href="/quem-somos"
             onClick={closeMenus}
-            className={`text-sm transition-colors hover:text-[#d5a72d] ${
-              pathname === "/quem-somos" ? "text-[#d5a72d]" : "text-white"
+            className={`text-sm transition-colors hover:text-[#d90820] ${
+              pathname === "/quem-somos" ? "text-[#d90820]" : "text-white"
             }`}
           >
             Quem somos
@@ -198,8 +198,8 @@ export default function Menu() {
               setOpenLine(currentLine ?? "guindastes");
               setPreviewSlug(null);
             }}
-            className={`inline-flex items-center gap-1 text-sm transition-colors hover:text-[#d5a72d] ${
-              openLine ? "text-[#d5a72d]" : "text-white"
+            className={`inline-flex items-center gap-1 text-sm transition-colors hover:text-[#d90820] ${
+              openLine ? "text-[#d90820]" : "text-white"
             }`}
           >
             Produtos
@@ -212,8 +212,8 @@ export default function Menu() {
           <Link
             href="/contato"
             onClick={closeMenus}
-            className={`text-sm transition-colors hover:text-[#d5a72d] ${
-              pathname === "/contato" ? "text-[#d5a72d]" : "text-white"
+            className={`text-sm transition-colors hover:text-[#d90820] ${
+              pathname === "/contato" ? "text-[#d90820]" : "text-white"
             }`}
           >
             Contato
@@ -238,7 +238,7 @@ export default function Menu() {
               setOpenLine(null);
               setPreviewSlug(null);
             }}
-            className="p-2 text-white transition-colors hover:text-[#d5a72d]"
+            className="p-2 text-white transition-colors hover:text-[#d90820]"
           >
             {searchOpen ? <X size={20} /> : <Search size={20} />}
           </button>
@@ -259,7 +259,7 @@ export default function Menu() {
             aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((open) => !open)}
-            className="rounded-sm p-2 text-white transition-colors hover:text-[#d5a72d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5a72d] lg:hidden"
+            className="rounded-sm p-2 text-white transition-colors hover:text-[#d90820] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d90820] lg:hidden"
           >
             {mobileOpen ? <X size={25} /> : <MenuIcon size={25} />}
           </button>
@@ -287,7 +287,7 @@ export default function Menu() {
               }}
               className={`relative flex min-w-0 items-center justify-center border-b-2 px-5 text-[10px] font-bold uppercase tracking-wide transition-colors xl:min-w-48 xl:px-8 xl:text-[11px] ${
                 activeLine === line && openLine
-                  ? "border-[#d5a72d] text-white"
+                  ? "border-[#d90820] text-white"
                   : "border-transparent text-white/60 hover:text-white"
               }`}
             >
@@ -315,7 +315,7 @@ export default function Menu() {
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="O que você procura?"
               autoFocus
-              className="min-w-0 flex-1 border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#d5a72d]"
+              className="min-w-0 flex-1 border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#d90820]"
             />
 
             <button type="submit" className={buttonPrimary}>
@@ -327,14 +327,14 @@ export default function Menu() {
 
       {/* Mega menu desktop */}
       <div
-        className={`absolute inset-x-0 top-full hidden overflow-hidden border-b border-white/10 bg-[#f5f5f3] shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all duration-300 lg:block ${
+        className={`absolute left-[calc(50%-50vw)] top-full z-50 hidden w-screen overflow-hidden bg-[#f5f5f3] shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all duration-300 lg:block ${
           openLine
             ? "visible translate-y-0 opacity-100"
             : "invisible -translate-y-2 opacity-0"
         }`}
       >
         {activeInfo && (
-          <div className="mx-auto grid min-h-[420px] max-w-[1480px] grid-cols-[0.38fr_0.62fr]">
+          <div className="grid w-full grid-cols-[38%_62%] items-stretch">
             <div className="flex flex-col px-8 py-10 xl:px-14 xl:py-12">
               <Link
                 href={`/produtos/${activeLine}`}
@@ -357,9 +357,9 @@ export default function Menu() {
                     onMouseEnter={() => setPreviewSlug(product.slug)}
                     onFocus={() => setPreviewSlug(product.slug)}
                     onClick={closeMenus}
-                    className={`border-l-2 py-2.5 pl-2 text-sm font-medium transition-all hover:border-[#d5a72d] hover:pl-3 hover:text-[#b58a17] xl:text-base ${
+                    className={`border-l-2 py-2.5 pl-2 text-sm font-medium transition-all hover:border-[#d90820] hover:pl-3 hover:text-[#b58a17] xl:text-base ${
                       previewProduct?.slug === product.slug
-                        ? "border-[#d5a72d] text-[#171c21]"
+                        ? "border-[#d90820] text-[#171c21]"
                         : "border-transparent text-[#6a7075]"
                     }`}
                   >
@@ -373,18 +373,17 @@ export default function Menu() {
               <Link
                 href={productHref(previewProduct)}
                 onClick={closeMenus}
-                className="group relative min-h-[420px] overflow-hidden bg-[#333a40]"
+                className="group relative block min-h-[420px] w-full self-stretch overflow-hidden bg-[#333a40] leading-none"
               >
                 <img
                   src={previewProduct.image}
                   alt={previewProduct.name}
-                  className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
+                  className="absolute inset-0 block h-full w-full object-cover"
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-r from-[#111519]/80 via-[#111519]/25 to-transparent" />
 
                 <div className="absolute bottom-8 left-8 max-w-md text-white xl:bottom-12 xl:left-12">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e5bd51]">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e55062]">
                     {activeInfo.label}
                   </p>
 
@@ -426,7 +425,7 @@ export default function Menu() {
                   key={item.href}
                   href={item.href}
                   onClick={closeMenus}
-                  className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors hover:text-[#d5a72d]"
+                  className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors hover:text-[#d90820]"
                 >
                   {item.label}
                 </Link>
@@ -436,7 +435,7 @@ export default function Menu() {
                 type="button"
                 aria-expanded={mobileProductsOpen}
                 onClick={() => setMobileProductsOpen((open) => !open)}
-                className="flex items-center justify-between border-b border-white/10 py-5 text-left font-bold uppercase text-white transition-colors hover:text-[#d5a72d]"
+                className="flex items-center justify-between border-b border-white/10 py-5 text-left font-bold uppercase text-white transition-colors hover:text-[#d90820]"
               >
                 Produtos
                 <ChevronDown
@@ -459,7 +458,7 @@ export default function Menu() {
                         <Link
                           href={`/produtos/${line}`}
                           onClick={closeMenus}
-                          className="block py-2 text-sm font-bold text-[#d5a72d]"
+                          className="block py-2 text-sm font-bold text-[#d90820]"
                         >
                           {info.label}
                         </Link>
@@ -491,7 +490,7 @@ export default function Menu() {
               <Link
                 href="/contato"
                 onClick={closeMenus}
-                className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors hover:text-[#d5a72d]"
+                className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors hover:text-[#d90820]"
               >
                 Contato
               </Link>
@@ -516,7 +515,7 @@ export default function Menu() {
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Pesquisar produtos..."
-                  className="min-w-0 flex-1 border border-white/20 bg-white/5 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#d5a72d]"
+                  className="min-w-0 flex-1 border border-white/20 bg-white/5 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#d90820]"
                 />
 
                 <button

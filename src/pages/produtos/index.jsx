@@ -5,6 +5,7 @@ import { lineInfo, products } from "../../../lib/catalog";
 import Menu from "../../components/menu";
 import Rodape from "../../components/rodape";
 import Whats from "../../components/whats";
+import { ArrowRight } from "lucide-react";
 
 export default function ProdutosPage() {
   const [query, setQuery] = useState("");
@@ -124,41 +125,59 @@ export default function ProdutosPage() {
             ) : (
               <>
                 <div className="mt-14">
-                  <p className="eyebrow text-primary">Linhas de produtos</p>
-                  <h2 className="mt-3 font-display text-4xl uppercase">
-                    Explore nosso catálogo
-                  </h2>
+                  <div className="flex items-end justify-between gap-5">
+                    <div>
+                      <p className="eyebrow text-primary">Vitrine industrial</p>
+
+                      <h2 className="mt-4 font-display text-4xl uppercase lg:text-6xl">
+                        Nosso catálogo.
+                      </h2>
+
+                      <p className="mt-4 max-w-xl text-sm text-muted-foreground">
+                        Conheça nossas soluções em equipamentos e proteção
+                        industrial.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-8 grid gap-px bg-border md:grid-cols-2">
-                  {Object.entries(lineInfo).map(([slug, line]) => (
+                <div className="mt-12 grid gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {products.map((product) => (
                     <Link
-                      key={slug}
-                      href={`/produtos/${slug}`}
-                      className="group grid min-h-[300px] grid-cols-1 overflow-hidden bg-background sm:grid-cols-[1fr_0.85fr]"
+                      key={`${product.line}-${product.slug}`}
+                      href={`/produtos/${product.line}/${product.slug}`}
+                      className="group block"
                     >
-                      <div className="flex flex-col justify-between gap-8 p-7 lg:p-9">
-                        <div>
-                          <p className="eyebrow text-primary">Linha NEXT</p>
-                          <h3 className="mt-4 font-display text-3xl uppercase">
-                            {line.label}
-                          </h3>
-                          <p className="mt-4 text-sm text-muted-foreground">
-                            {line.description}
-                          </p>
-                        </div>
-                        <span className="text-xs font-bold uppercase">
-                          Explorar linha →
-                        </span>
-                      </div>
-                      <div className="min-h-[220px] overflow-hidden bg-steel sm:min-h-[300px]">
+                      <div className="aspect-[4/5] overflow-hidden bg-steel">
                         <img
-                          src={line.image}
-                          alt={line.label}
+                          src={product.image}
+                          alt={product.name}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                           loading="lazy"
-                          className="h-full min-h-[220px] w-full object-cover transition-transform duration-700 group-hover:scale-105 sm:min-h-[300px]"
+                          width="1200"
+                          height="1500"
                         />
                       </div>
+
+                      <p className="eyebrow mt-5 text-primary">
+                        {lineInfo[product.line]?.label}
+                      </p>
+
+                      <h3 className="mt-2 font-display text-2xl uppercase">
+                        {product.name}
+                      </h3>
+
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {product.description}
+                      </p>
+
+                      <span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase">
+                        Conheça o produto
+                        <ArrowRight
+                          size={16}
+                          className="transition-transform group-hover:translate-x-1"
+                        />
+                      </span>
                     </Link>
                   ))}
                 </div>
