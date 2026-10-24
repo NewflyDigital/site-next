@@ -35,7 +35,7 @@
     "dayjs": "^1.11.10",
     "draft-js": "^0.11.7",
     "draftjs-to-html": "^0.9.1",
-    "firebase": "^10.7.1",
+    "firebase": "^10.14.1",
     "lucide-react": "^1.56.0",
     "moment": "^2.30.1",
     "mui-tiptap": "^1.8.6",

@@ -5,42 +5,48 @@ import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
 
+import { db } from "../../../../firebase-config";
+import { collection, getDocs } from "firebase/firestore";
+
 function getYouTubeEmbedUrl(value) {
   if (!value) return "";
 
-  try {
-    const url = new URL(value);
+  const input = String(value).trim();
 
-    if (url.hostname === "youtu.be") {
-      return `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}`;
+  try {
+    const url = new URL(input);
+    const host = url.hostname.replace(/^www\./, "");
+    let id = "";
+
+    if (host === "youtu.be") {
+      id = url.pathname.split("/").filter(Boolean)[0] || "";
+    } else if (
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "youtube-nocookie.com"
+    ) {
+      id =
+        url.searchParams.get("v") ||
+        url.pathname.match(/\/(?:embed|shorts|live)\/([^/?]+)/)?.[1] ||
+        "";
     }
 
-    if (
-      url.hostname.includes("youtube.com") ||
-      url.hostname.includes("youtube-nocookie.com")
-    ) {
-      const id =
-        url.searchParams.get("v") ||
-        url.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1];
-
-      if (id) {
-        return `https://www.youtube-nocookie.com/embed/${id}`;
-      }
+    if (id) {
+      return `https://www.youtube-nocookie.com/embed/${id}`;
     }
   } catch {
-    // Se não for uma URL, considera o valor como ID do vídeo.
+    // Se não for uma URL, aceita o valor como ID do vídeo.
   }
 
-  return `https://www.youtube-nocookie.com/embed/${value}`;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+    return `https://www.youtube-nocookie.com/embed/${input}`;
+  }
+
+  return "";
 }
 
-export default function ProdutoPage({ product }) {
+export default function ProdutoPage({ product, related, info }) {
   if (!product) return null;
-
-  const info = lineInfo[product.line];
-  const related = products
-    .filter((item) => item.line === product.line && item.slug !== product.slug)
-    .slice(0, 3);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
 
@@ -436,28 +442,66 @@ export default function ProdutoPage({ product }) {
   );
 }
 
-export function getStaticPaths() {
-  return {
-    paths: products.map((product) => ({
-      params: {
-        line: product.line,
-        slug: product.slug,
+export async function getServerSideProps({ params }) {
+  try {
+    const snapshot = await getDocs(collection(db, "produtos"));
+
+    // Converte os documentos do Firestore em objetos serializáveis
+    const produtos = snapshot.docs.map((item) => {
+      const dados = item.data();
+
+      return {
+        id: item.id,
+        ...dados,
+        criadoEm: dados.criadoEm?.toDate?.().toISOString() ?? null,
+        atualizadoEm: dados.atualizadoEm?.toDate?.().toISOString() ?? null,
+      };
+    });
+
+    // Localiza o produto solicitado pela URL
+    const product = produtos.find(
+      (item) =>
+        item.line === params.line &&
+        item.slug === params.slug &&
+        item.ativo !== false,
+    );
+
+    if (!product) {
+      return { notFound: true };
+    }
+
+    // Informações da linha do equipamento
+    const info = lineInfo[product.line] || {
+      label: product.line,
+      description: "Conheça as soluções da NEXT Implementos para sua operação.",
+      headline: product.name,
+      image: product.image || "/static/images/next-hero.jpg",
+    };
+
+    // Produtos relacionados da mesma linha
+    const related = produtos
+      .filter(
+        (item) =>
+          item.id !== product.id &&
+          item.line === product.line &&
+          item.ativo !== false &&
+          item.name &&
+          item.slug &&
+          item.image,
+      )
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), "pt-BR"))
+      .slice(0, 3);
+
+    return {
+      props: {
+        product,
+        related,
+        info,
       },
-    })),
-    fallback: false,
-  };
-}
+    };
+  } catch (error) {
+    console.error("Erro ao carregar página do produto:", error);
 
-export function getStaticProps({ params }) {
-  const product = getProduct(params.line, params.slug);
-
-  if (!product) {
     return { notFound: true };
   }
-
-  return {
-    props: {
-      product,
-    },
-  };
 }

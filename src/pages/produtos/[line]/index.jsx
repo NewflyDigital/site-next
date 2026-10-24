@@ -5,6 +5,9 @@ import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
 
+import { db } from "../../../../firebase-config";
+import { collection, getDocs } from "firebase/firestore";
+
 export default function LinhaProdutosPage({ line, info, items }) {
   if (!info) return null;
 
@@ -116,30 +119,62 @@ export default function LinhaProdutosPage({ line, info, items }) {
   );
 }
 
-export function getStaticPaths() {
-  return {
-    paths: Object.keys(lineInfo).map((line) => ({
-      params: { line },
-    })),
-    fallback: false,
-  };
-}
+export async function getServerSideProps({ params }) {
+  try {
+    const line = params.line;
+    const snapshot = await getDocs(collection(db, "produtos"));
 
-export function getStaticProps({ params }) {
-  const line = params.line;
-  const info = lineInfo[line];
+    const todosProdutos = snapshot.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }));
 
-  if (!info) {
-    return { notFound: true };
+    const items = todosProdutos
+      .filter(
+        (product) =>
+          product.line === line &&
+          product.ativo !== false &&
+          product.name &&
+          product.slug &&
+          product.image,
+      )
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), "pt-BR"));
+
+    // Mantém os dados institucionais das linhas já existentes.
+    // Linhas novas também podem aparecer sem cadastro manual no catálogo local.
+    const info = lineInfo[line] || {
+      label: line
+        .split("-")
+        .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+        .join(" "),
+      headline: "Conheça nossos equipamentos.",
+      description:
+        "Soluções NEXT desenvolvidas para diferentes operações e segmentos.",
+      image: "/static/images/next-hero.jpg",
+    };
+
+    return {
+      props: {
+        line,
+        info,
+        items,
+      },
+    };
+  } catch (error) {
+    console.error("Erro ao carregar produtos da linha:", error);
+
+    return {
+      props: {
+        line: params.line,
+        info: lineInfo[params.line] || {
+          label: params.line,
+          headline: "Conheça nossos equipamentos.",
+          description:
+            "Soluções NEXT desenvolvidas para diferentes operações e segmentos.",
+          image: "/static/images/next-hero.jpg",
+        },
+        items: [],
+      },
+    };
   }
-
-  const items = products.filter((product) => product.line === line);
-
-  return {
-    props: {
-      line,
-      info,
-      items,
-    },
-  };
 }

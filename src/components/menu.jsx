@@ -23,9 +23,9 @@ const navLinks = [
 const buttonBase =
   "inline-flex items-center justify-center gap-2 rounded-sm border px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d90820]";
 
-const buttonPrimary = `${buttonBase} border-[#d90820] bg-[#d90820] text-[#111519] hover:bg-transparent hover:text-[#d90820]`;
+const buttonPrimary = `${buttonBase} border-[#d90820] bg-[#d90820] text-[#ffffff] hover:bg-transparent hover:text-[#d90820]`;
 
-const buttonGlass = `${buttonBase} border-white/50 bg-transparent text-white hover:border-[#d90820] hover:bg-[#d90820] hover:text-[#111519]`;
+const buttonGlass = `${buttonBase} border-white/50 bg-transparent text-white hover:border-[#d90820] hover:bg-[#d90820] hover:text-[#ffffff]`;
 
 export default function Menu() {
   const pathname = usePathname();
@@ -156,7 +156,7 @@ export default function Menu() {
           <img
             src="/static/images/next-logo.png"
             alt="NEXT Implementos"
-            className="h-auto w-40 max-w-full sm:w-44 lg:w-52"
+            className="h-auto w-50 max-w-full sm:w-44 lg:w-60"
             width="292"
             height="80"
           />

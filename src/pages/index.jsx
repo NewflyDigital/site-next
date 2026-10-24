@@ -7,7 +7,14 @@ import {
   ShieldCheck,
   Sparkles,
   Wrench,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+import { useEffect, useState } from "react";
+import { db } from "../../firebase-config";
+
+import { collection, getDocs, getDoc, doc } from "firebase/firestore";
 
 import Menu from "../components/menu";
 import Rodape from "../components/rodape";
@@ -57,7 +64,112 @@ const buttonGlass =
 export default function Home() {
   const lines = Object.entries(lineInfo);
 
-  const featuredProducts = products.filter((product) => product.featured);
+  const [banners, setBanners] = useState([]);
+  const [bannerAtual, setBannerAtual] = useState(0);
+  const [bannersCarregados, setBannersCarregados] = useState(false);
+
+  useEffect(() => {
+    async function carregarBanners() {
+      try {
+        const snapshot = await getDocs(collection(db, "banners"));
+
+        const lista = snapshot.docs
+          .map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }))
+          .filter((banner) => banner.ativo === true)
+          .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0))
+          .filter((banner) => banner.imagemUrl)
+          .slice(0, 4);
+
+        setBanners(lista);
+        setBannerAtual(0);
+      } catch (error) {
+        console.error("Erro ao carregar banners do Firebase:", error);
+      } finally {
+        setBannersCarregados(true);
+      }
+    }
+
+    carregarBanners();
+  }, []);
+
+  const slidesBanner =
+    banners.length > 0
+      ? banners
+      : [
+          {
+            id: "banner-padrao",
+            titulo: "Engenharia que movimenta grandes operações.",
+            subtitulo:
+              "Soluções em equipamentos e implementos desenvolvidas para entregar segurança, produtividade e desempenho em cada operação.",
+            link: "/produtos",
+            imagemUrl: heroImage,
+          },
+        ];
+
+  useEffect(() => {
+    if (slidesBanner.length <= 1) return;
+
+    const intervalo = setInterval(() => {
+      setBannerAtual((atual) => (atual + 1) % slidesBanner.length);
+    }, 6000);
+
+    return () => clearInterval(intervalo);
+  }, [slidesBanner.length]);
+
+  const bannerSelecionado = slidesBanner[bannerAtual] || slidesBanner[0];
+
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  useEffect(() => {
+    async function carregarDestaques() {
+      try {
+        const [configSnapshot, produtosSnapshot] = await Promise.all([
+          getDoc(doc(db, "siteConfig", "home")),
+          getDocs(collection(db, "produtos")),
+        ]);
+
+        if (!configSnapshot.exists()) {
+          setFeaturedProducts([]);
+          return;
+        }
+
+        const config = configSnapshot.data();
+        const idsDestaque = Array.isArray(config.produtosDestaque)
+          ? config.produtosDestaque
+          : [];
+
+        const produtos = produtosSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+
+        // Mantém a ordem definida no painel de destaques.
+        const produtosSelecionados = idsDestaque
+          .map((id) => produtos.find((produto) => produto.id === id))
+          .filter(
+            (produto) =>
+              produto &&
+              produto.ativo === true &&
+              produto.slug &&
+              produto.line &&
+              produto.image,
+          );
+
+        setFeaturedProducts(produtosSelecionados);
+      } catch (error) {
+        console.error("Erro ao carregar produtos em destaque:", error);
+        setFeaturedProducts([]);
+      } finally {
+        setFeaturedLoading(false);
+      }
+    }
+
+    carregarDestaques();
+  }, []);
 
   return (
     <>
@@ -92,39 +204,63 @@ export default function Home() {
 
       <main>
         {/* HERO */}
+
+        {/* HERO / CARROSSEL DE BANNERS */}
         <section
           id="banner"
-          className="relative flex min-h-[94svh] items-end overflow-hidden bg-industrial px-5 pb-20 pt-32 text-surface-contrast lg:px-10 lg:pb-24"
+          className="relative flex min-h-[94svh] items-end overflow-hidden bg-industrial px-5 pb-20 pt-40 text-surface-contrast lg:px-10 lg:pb-24"
         >
-          <img
-            src={heroImage}
-            alt="Guindaste articulado em operação industrial"
-            className="absolute inset-0 h-full w-full object-cover"
-            width="1920"
-            height="1080"
-            fetchPriority="high"
-          />
+          {/* Imagem do banner */}
+          <div className="absolute inset-0">
+            {slidesBanner.map((banner, index) => (
+              <img
+                key={banner.id}
+                src={banner.imagemUrl || heroImage}
+                alt={
+                  banner.titulo || "Banner institucional da NEXT Implementos"
+                }
+                width="1920"
+                height="1080"
+                fetchPriority={index === 0 ? "high" : "auto"}
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+                  index === bannerAtual
+                    ? "opacity-100"
+                    : "pointer-events-none opacity-0"
+                }`}
+                aria-hidden={index !== bannerAtual}
+              />
+            ))}
+          </div>
 
+          {/* Camada de contraste */}
           <div className="hero-shade absolute inset-0" />
 
-          <div className="relative mx-auto w-full max-w-[1480px] reveal">
+          {/* Conteúdo */}
+          <div
+            key={bannerSelecionado.id}
+            className="relative mx-auto w-full max-w-[1480px] reveal"
+          >
             <p className="eyebrow mb-6 inline-flex bg-primary px-3 py-2 text-primary-foreground">
               Engenharia brasileira
             </p>
 
             <h1 className="max-w-5xl font-display text-5xl uppercase leading-[0.92] sm:text-7xl lg:text-[6.3rem]">
-              Engenharia que movimenta{" "}
-              <span className="text-primary">grandes operações.</span>
+              {bannerSelecionado.titulo ||
+                "Engenharia que movimenta grandes operações."}
             </h1>
 
-            <p className="mt-7 max-w-2xl text-base text-surface-contrast/70 lg:text-xl">
-              Soluções em equipamentos e implementos desenvolvidas para entregar
-              segurança, produtividade e desempenho em cada operação.
-            </p>
+            {bannerSelecionado.subtitulo && (
+              <p className="mt-7 max-w-2xl text-base text-surface-contrast/70 lg:text-xl">
+                {bannerSelecionado.subtitulo}
+              </p>
+            )}
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Link href="/produtos" className={buttonPrimary}>
-                Conheça nossos produtos
+              <Link
+                href={bannerSelecionado.link || "/produtos"}
+                className={buttonPrimary}
+              >
+                Saiba mais
                 <ArrowRight size={18} />
               </Link>
 
@@ -133,6 +269,64 @@ export default function Home() {
               </Link>
             </div>
           </div>
+
+          {/* Navegação lateral */}
+          {slidesBanner.length > 1 && (
+            <div className="absolute bottom-24 right-5 z-10 flex items-center gap-2 lg:bottom-28 lg:right-10">
+              <button
+                type="button"
+                onClick={() =>
+                  setBannerAtual(
+                    (atual) =>
+                      (atual - 1 + slidesBanner.length) % slidesBanner.length,
+                  )
+                }
+                aria-label="Banner anterior"
+                className="flex h-11 w-11 items-center justify-center border border-white/30 bg-black/20 text-white backdrop-blur transition hover:bg-primary hover:text-primary-foreground"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setBannerAtual((atual) => (atual + 1) % slidesBanner.length)
+                }
+                aria-label="Próximo banner"
+                className="flex h-11 w-11 items-center justify-center border border-white/30 bg-black/20 text-white backdrop-blur transition hover:bg-primary hover:text-primary-foreground"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {/* Indicadores */}
+          {slidesBanner.length > 1 && (
+            <div
+              className="absolute bottom-10 left-5 z-10 flex items-center gap-3 lg:left-10"
+              aria-label="Selecionar banner"
+            >
+              {slidesBanner.map((banner, index) => (
+                <button
+                  key={banner.id}
+                  type="button"
+                  onClick={() => setBannerAtual(index)}
+                  aria-label={`Ir para o banner ${index + 1}`}
+                  aria-current={index === bannerAtual ? "true" : undefined}
+                  className={`h-1.5 transition-all duration-300 ${
+                    index === bannerAtual
+                      ? "w-12 bg-primary"
+                      : "w-6 bg-white/50 hover:bg-white"
+                  }`}
+                />
+              ))}
+
+              <span className="ml-1 text-xs text-white/70">
+                {String(bannerAtual + 1).padStart(2, "0")} /{" "}
+                {String(slidesBanner.length).padStart(2, "0")}
+              </span>
+            </div>
+          )}
 
           <div className="absolute bottom-8 right-8 hidden items-center gap-3 text-xs uppercase text-white/60 lg:flex">
             Role para explorar
@@ -323,46 +517,60 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="mt-12 flex snap-x gap-4 overflow-x-auto pb-6">
-              {featuredProducts.map((product) => (
-                <Link
-                  key={`${product.line}-${product.slug}`}
-                  href={`/produtos/${product.line}/${product.slug}`}
-                  className="group min-w-[82vw] snap-start md:min-w-[380px]"
-                >
-                  <div className="aspect-[4/5] overflow-hidden bg-steel">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      loading="lazy"
-                      width="1200"
-                      height="1500"
-                    />
-                  </div>
+            {featuredLoading ? (
+              <div className="mt-12 py-12 text-sm text-muted-foreground">
+                Carregando produtos...
+              </div>
+            ) : featuredProducts.length > 0 ? (
+              <div className="mt-12 flex snap-x gap-4 overflow-x-auto pb-6">
+                {featuredProducts.map((product) => (
+                  <Link
+                    key={product.id}
+                    href={`/produtos/${product.line}/${product.slug}`}
+                    className="group min-w-[82vw] snap-start md:min-w-[380px]"
+                  >
+                    <div className="aspect-[4/5] overflow-hidden bg-steel">
+                      <img
+                        src={product.image}
+                        alt={product.name || "Produto NEXT Implementos"}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                        width="1200"
+                        height="1500"
+                      />
+                    </div>
 
-                  <p className="eyebrow mt-5 text-primary">
-                    {lineInfo[product.line]?.label}
-                  </p>
+                    <p className="eyebrow mt-5 text-primary">
+                      {lineInfo[product.line]?.label || product.line}
+                    </p>
 
-                  <h3 className="mt-2 font-display text-2xl uppercase">
-                    {product.name}
-                  </h3>
+                    <h3 className="mt-2 font-display text-2xl uppercase">
+                      {product.name}
+                    </h3>
 
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {product.description}
-                  </p>
+                    {product.description && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {product.description}
+                      </p>
+                    )}
 
-                  <span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase">
-                    Conheça o produto
-                    <ArrowRight
-                      size={16}
-                      className="transition-transform group-hover:translate-x-1"
-                    />
-                  </span>
-                </Link>
-              ))}
-            </div>
+                    <span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase">
+                      Conheça o produto
+                      <ArrowRight
+                        size={16}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-12 border border-border p-8">
+                <p className="text-muted-foreground">
+                  Nenhum produto em destaque disponível no momento.
+                </p>
+              </div>
+            )}
 
             <Link
               href="/produtos"
