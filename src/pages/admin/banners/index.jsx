@@ -16,7 +16,7 @@ import {
   uploadBytes,
 } from "firebase/storage";
 
-import { db, storage } from "../../../../firebase-config";
+import { db, storage, auth } from "../../../../firebase-config";
 
 import {
   Alert,
@@ -247,22 +247,33 @@ export default function BannersPage() {
 
       await carregarBanners();
     } catch (error) {
-      console.error("Erro ao salvar banner:", error);
+      console.error("Erro ao salvar banner:", {
+        code: error.code,
+        message: error.message,
+        name: error.name,
+        projeto: storage.app.options.projectId,
+        bucket: storage.app.options.storageBucket,
+        usuario: auth.currentUser?.uid ?? null,
+      });
 
-      // Evita deixar um arquivo novo órfão se o cadastro falhar.
       if (caminhoNovaImagem) {
         try {
           await deleteObject(ref(storage, caminhoNovaImagem));
         } catch (cleanupError) {
           console.warn(
             "Não foi possível limpar a imagem enviada:",
-            cleanupError,
+            cleanupError.code,
+            cleanupError.message,
           );
         }
       }
 
       setErro(
-        "Não foi possível salvar o banner. Confira as permissões do Firebase e tente novamente.",
+        error.code === "storage/unauthorized"
+          ? "O Firebase Storage negou o acesso. Confira a autenticação, o bucket e as regras do Storage."
+          : error.code === "permission-denied"
+            ? "O Firestore negou a gravação do banner. Confira as regras do Firestore."
+            : `Erro ao salvar o banner: ${error.message || "verifique o console."}`,
       );
     } finally {
       setSalvando(false);

@@ -15,7 +15,7 @@ import ModeEditIcon from "@mui/icons-material/ModeEdit";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Tooltip from "@mui/material/Tooltip";
-import { ReadAll, Delete } from "../../../services/usuarios";
+import { Delete } from "../../../services/usuarios";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
 import Link from "next/link";
@@ -130,7 +130,7 @@ const Content = () => {
                                   if (value) {
                                     setLoader(true);
                                     Delete({ id: usuario.id }).finally(() =>
-                                      loadValues()
+                                      loadValues(),
                                     );
                                   }
                                 });
@@ -141,7 +141,7 @@ const Content = () => {
                           </Tooltip>
                         </Stack>
                       </TableCell>
-                    </TableRow>
+                    </TableRow>,
                   );
                 });
 
@@ -154,7 +154,7 @@ const Content = () => {
                       >
                         Sem registros cadastrados
                       </TableCell>
-                    </TableRow>
+                    </TableRow>,
                   );
                 }
 

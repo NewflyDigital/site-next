@@ -1,65 +1,79 @@
-import { db } from "../../firebase-config";
+import { db, auth } from "../../firebase-config";
+
 import {
   collection,
-  doc,
   getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
+
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import axios from "axios";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 const usuariosRef = collection(db, "usuarios");
 
-export const ReadAll = () =>
-  new Promise(async (resolve) => {
-    try {
-      const data = await getDocs(usuariosRef);
-      const { docs } = data;
-      const retorno = docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+export const ReadByEmail = async ({ email = "" }) => {
+  const emailNormalizado = email.trim().toLowerCase();
+  const usuarioAutenticado = auth.currentUser;
 
-      resolve({ status: 200, data: retorno });
-    } catch (error) {
-      resolve({ status: 400, data: [] });
+  console.log("[LOGIN] Projeto Firestore:", db.app.options.projectId);
+  console.log("[LOGIN] Projeto Auth:", auth.app.options.projectId);
+  console.log("[LOGIN] Usuário autenticado:", usuarioAutenticado?.uid);
+  console.log("[LOGIN] E-mail consultado:", emailNormalizado);
+
+  if (!usuarioAutenticado) {
+    return {
+      status: 401,
+      data: null,
+      message: "Usuário não está autenticado no Firebase.",
+    };
+  }
+
+  try {
+    const consulta = query(usuariosRef, where("email", "==", emailNormalizado));
+
+    const snapshot = await getDocs(consulta);
+
+    console.log("[LOGIN] Usuários encontrados:", snapshot.size);
+
+    if (snapshot.empty) {
+      return {
+        status: 404,
+        data: null,
+        message: "Cadastro não encontrado na coleção usuarios.",
+      };
     }
-  });
 
-export const Read = ({ id = null }) =>
-  new Promise(async (resolve) => {
-    const segmentoDoc = doc(db, "usuarios", id);
-    const docSnap = await getDoc(segmentoDoc);
+    const documento = snapshot.docs[0];
+    const dados = documento.data();
 
-    if (docSnap.exists()) {
-      resolve({
-        status: 200,
-        data: { ...docSnap.data(), senha: makeRandomString(8) },
-      });
-    } else {
-      resolve({ status: 400, data: {} });
-    }
-  });
+    return {
+      status: 200,
+      data: {
+        ...dados,
+        id: documento.id,
+      },
+    };
+  } catch (error) {
+    console.error("[LOGIN] Falha ao consultar Firestore:", {
+      code: error.code,
+      message: error.message,
+      projeto: db.app.options.projectId,
+      uid: usuarioAutenticado.uid,
+    });
 
-export const ReadByEmail = ({ email = "" }) =>
-  new Promise(async (resolve, reject) => {
-    try {
-      const q = query(usuariosRef, where("email", "==", email.toLowerCase()));
-      const data = await getDocs(q);
-      const { docs } = data;
-      const usuarios = docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-
-      if (usuarios.length > 0) {
-        resolve({ status: 200, data: usuarios[0] });
-      } else {
-        throw new Error("Usuário não encontrado");
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
+    return {
+      status: 500,
+      data: null,
+      code: error.code,
+      message: error.message || "Erro ao consultar o cadastro no Firestore.",
+    };
+  }
+};
 
 export const Create = ({
   nome = "",
@@ -71,8 +85,6 @@ export const Create = ({
 }) =>
   new Promise((resolve) => {
     try {
-      const auth = getAuth();
-
       createUserWithEmailAndPassword(auth, email, senha)
         .then(async (userCredential) => {
           const usuario = {
@@ -122,8 +134,6 @@ export const Update = ({
 
 export const Delete = ({ id = "", fbId = "" }) =>
   new Promise(async (resolve) => {
-    const auth = getAuth();
-
     const segmentoDoc = doc(db, "usuarios", id);
 
     await deleteDoc(segmentoDoc);

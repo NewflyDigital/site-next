@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Admin from "../../../components/admin";
+import { db, storage } from "../../../../firebase-config";
 
 import {
   addDoc,

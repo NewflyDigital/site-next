@@ -43,8 +43,8 @@ function Copyright(props) {
       {...props}
     >
       {"Copyright © "}
-      <Link color="inherit" href="https://cjstransportes.com.br/">
-        CJS Transportes
+      <Link color="inherit" href="https://SITE.com.br/">
+        NEXT Implementos
       </Link>
       &nbsp;
       {new Date().getFullYear()}
@@ -82,98 +82,121 @@ export default function SignInSide() {
 
   const router = useRouter();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
 
-    const email = data.get("email");
-    const password = data.get("password");
-    let isValid = true;
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
 
-    if (email.trim() === "") {
-      const newError = { ...error };
-      newError.email = true;
-      setError(newError);
-      isValid = false;
+    setError({});
+    setLogInError({ status: false, message: "" });
+
+    if (!email || !password) {
+      setError({
+        email: !email,
+        senha: !password,
+      });
+      return;
     }
-
-    if (password.trim() === "") {
-      const newError = { ...error };
-      newError.senha = true;
-      setError(newError);
-      isValid = false;
-    }
-
-    if (!isValid) return;
 
     setLoading(true);
 
-    signInWithEmailAndPassword(auth, email.trim(), password.trim())
-      .then((retorno) => {
-        ReadByEmail({ email: retorno.user.email })
-          .then((retorno) => {
-            const { status, data } = retorno;
+    try {
+      // 1. Autentica no Firebase Authentication
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
 
-            if (status === 200) {
-              if (data.ativo) {
-                localStorage.setItem("isAuth", true);
-                localStorage.setItem("user", JSON.stringify(data));
+      // 2. Busca o cadastro correspondente no sistema
 
-                const localStorageClient = new LocalStorageCache();
-                localStorageClient.removeItem("cargas");
-                localStorageClient.removeItem("clientes");
+      const resultado = await ReadByEmail({
+        email: credential.user.email,
+      });
 
-                if (data.tipoDeUsuario === "A") {
-                  router.push("/admin/dashboard");
-                } else if (data.tipoDeUsuario === "C") {
-                  router.push("/admin/cargas/cliente");
-                }
-              } else {
-                setLogInError({
-                  status: true,
-                  message: "Usuário desabilitado",
-                });
-              }
-            } else {
-              setLogInError({
-                status: true,
-                message: "Usuário não encontrado no banco de dados",
-              });
-            }
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+      console.log("Resultado ReadByEmail:", resultado);
 
-        //router.push("/admin/dashboard");
-      })
-      .catch((error) => {
-        const { code } = error;
+      if (resultado.status !== 200 || !resultado.data) {
+        setLogInError({
+          status: true,
+          message: resultado.message || "Cadastro não encontrado.",
+        });
+        return;
+      }
 
-        switch (code) {
-          case "auth/invalid-email":
-            setLogInError({ status: true, message: "E-mail inválido" });
-            break;
-          case "auth/user-disabled":
-            setLogInError({ status: true, message: "Usuário desabilitado" });
-            break;
-          case "auth/user-not-found":
-            setLogInError({ status: true, message: "Usuário não encontrado" });
-            break;
-          case "auth/wrong-password":
-            setLogInError({ status: true, message: "Senha inválida" });
-            break;
-          case "auth/too-many-requests":
-            setLogInError({
-              status: true,
-              message:
-                "Conta temporariamente desabilitada devido ao excesso de tentativas em acessá-la. Redefina sua senha e tente novamente.",
-            });
-            /*Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.*/
-            break;
-        }
-      })
-      .finally(() => setLoading(false));
+      const { data } = resultado;
+
+      // 3. Verifica se o cadastro está ativo
+      if (data.ativo !== true) {
+        setLogInError({
+          status: true,
+          message: "Usuário desabilitado.",
+        });
+        return;
+      }
+
+      // 4. Confere se o cadastro pertence ao usuário autenticado
+      if (data.fbId && data.fbId !== credential.user.uid) {
+        setLogInError({
+          status: true,
+          message:
+            "O cadastro do sistema não corresponde ao usuário autenticado.",
+        });
+        return;
+      }
+
+      // 5. Verifica o tipo de usuário antes de liberar o acesso
+      if (!["A", "C"].includes(data.tipoDeUsuario)) {
+        setLogInError({
+          status: true,
+          message: "O tipo de usuário não está configurado corretamente.",
+        });
+        return;
+      }
+
+      localStorage.setItem("isAuth", "true");
+      localStorage.setItem("user", JSON.stringify(data));
+
+      const localStorageClient = new LocalStorageCache();
+      localStorageClient.removeItem("cargas");
+      localStorageClient.removeItem("clientes");
+
+      if (data.tipoDeUsuario === "A") {
+        await router.push("/admin/dashboard");
+      } else {
+        await router.push("/admin/cargas/cliente");
+      }
+    } catch (error) {
+      console.error("Erro durante o login:", error);
+
+      const mensagens = {
+        "auth/invalid-email": "E-mail inválido.",
+        "auth/user-disabled":
+          "Usuário desabilitado no Firebase Authentication.",
+        "auth/user-not-found":
+          "Usuário não encontrado no Firebase Authentication.",
+        "auth/wrong-password": "Senha inválida.",
+        "auth/invalid-credential": "E-mail ou senha incorretos.",
+        "auth/too-many-requests":
+          "Muitas tentativas. Aguarde e tente novamente.",
+        "permission-denied":
+          "O Firebase negou a consulta. Verifique as regras do Firestore.",
+        "auth/network-request-failed":
+          "Falha de conexão. Verifique sua internet.",
+      };
+
+      setLogInError({
+        status: true,
+        message:
+          mensagens[error.code] ||
+          error.message ||
+          "Não foi possível realizar o login.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenDialog = ({ open = false }) => {
@@ -206,8 +229,8 @@ export default function SignInSide() {
   return (
     <ThemeProvider theme={theme}>
       <Head>
-        <title>Sistema CJS Transportes</title>
-        <meta name="description" content="Sistema CJS Transportes" />
+        <title>Sistema NEXT Implementos</title>
+        <meta name="description" content="Sistema NEXT Implementos" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/" />
       </Head>
@@ -224,8 +247,8 @@ export default function SignInSide() {
         >
           <div className="w-[20rem] h-auto pb-[2rem]">
             <Image
-              src={"/static/images/logo-CJS-azul.png"}
-              alt={"Logo Atualize"}
+              src={"/static/images/next-logo.png"}
+              alt={"Logo Next"}
               width={198}
               height={57}
               layout="responsive"
