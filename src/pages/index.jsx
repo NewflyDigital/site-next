@@ -63,6 +63,39 @@ const buttonGlass =
 
 export default function Home() {
   const lines = Object.entries(lineInfo);
+  const [homeLines, setHomeLines] = useState([]);
+  const [homeLinesLoading, setHomeLinesLoading] = useState(true);
+
+  useEffect(() => {
+    async function carregarLinhasHome() {
+      try {
+        const snapshot = await getDocs(collection(db, "homeLinhas"));
+
+        const lista = snapshot.docs
+          .map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }))
+          .filter(
+            (linha) =>
+              linha.ativo === true &&
+              linha.titulo &&
+              linha.imagem &&
+              linha.linhaSlug,
+          )
+          .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+
+        setHomeLines(lista);
+      } catch (error) {
+        console.error("Erro ao carregar linhas da página inicial:", error);
+        setHomeLines([]);
+      } finally {
+        setHomeLinesLoading(false);
+      }
+    }
+
+    carregarLinhasHome();
+  }, []);
 
   const [banners, setBanners] = useState([]);
   const [bannerAtual, setBannerAtual] = useState(0);
@@ -244,7 +277,7 @@ export default function Home() {
               Engenharia brasileira
             </p>
 
-            <h1 className="max-w-5xl font-display text-5xl uppercase leading-[0.92] sm:text-7xl lg:text-[6.3rem]">
+            <h1 className="max-w-5xl font-display text-5xl uppercase leading-[0.92] sm:text-4xl lg:text-[3.5rem]">
               {bannerSelecionado.titulo ||
                 "Engenharia que movimenta grandes operações."}
             </h1>
@@ -410,49 +443,64 @@ export default function Home() {
             </div>
 
             <div className="mt-14 grid w-full grid-cols-1 gap-px overflow-hidden bg-border sm:grid-cols-2 lg:grid-cols-4">
-              {lines.map(([slug, line], index) => (
-                <Link
-                  key={slug}
-                  href={`/produtos/${slug}`}
-                  className="group relative block h-[480px] min-w-0 overflow-hidden bg-industrial sm:h-[520px] lg:h-[560px] xl:h-[600px]"
-                >
-                  {/* Imagem: ocupa todo o card e se ajusta ao espaço */}
-                  <img
-                    src={line.image}
-                    alt={`${line.label} em operação`}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    loading="lazy"
-                    width="1200"
-                    height="1500"
-                  />
+              {homeLinesLoading ? (
+                <div className="col-span-full bg-background py-12 text-center text-sm text-muted-foreground">
+                  Carregando linhas de produtos...
+                </div>
+              ) : homeLines.length > 0 ? (
+                homeLines.map((line, index) => (
+                  <Link
+                    key={line.id}
+                    href={`/produtos/${line.linhaSlug}`}
+                    className="group relative block h-[480px] min-w-0 overflow-hidden bg-industrial sm:h-[520px] lg:h-[560px] xl:h-[600px]"
+                  >
+                    {/* Imagem do card */}
+                    <img
+                      src={line.imagem}
+                      alt={`${line.titulo} em operação`}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="lazy"
+                      width="1200"
+                      height="1500"
+                    />
 
-                  {/* Contraste sobre a imagem */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-industrial/80 via-industrial/10 to-transparent" />
+                    {/* Contraste sobre a imagem */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-industrial/80 via-industrial/10 to-transparent" />
 
-                  {/* Faixa vermelha: sobe até 90% no hover */}
-                  <div className="absolute inset-x-0 bottom-0 flex h-[42%] flex-col bg-primary p-5 text-primary-foreground transition-[height] duration-500 ease-out group-hover:h-[90%] sm:p-6 lg:p-5 xl:p-6">
-                    <p className="shrink-0 font-mono text-xs opacity-80">
-                      {String(index + 1).padStart(2, "0")}
-                    </p>
+                    {/* Faixa vermelha */}
+                    <div className="absolute inset-x-0 bottom-0 flex h-[42%] flex-col bg-primary p-5 text-primary-foreground transition-[height] duration-500 ease-out group-hover:h-[90%] sm:p-6 lg:p-5 xl:p-6">
+                      <p className="shrink-0 font-mono text-xs opacity-80">
+                        {String(Number(line.ordem) || index + 1).padStart(
+                          2,
+                          "0",
+                        )}
+                      </p>
 
-                    <h3 className="mt-3 shrink-0 font-display text-xl uppercase leading-tight sm:text-2xl lg:text-xl xl:text-2xl">
-                      {line.label}
-                    </h3>
+                      <h3 className="mt-3 shrink-0 font-display text-xl uppercase leading-tight sm:text-2xl lg:text-xl xl:text-2xl">
+                        {line.titulo}
+                      </h3>
 
-                    <p className="mt-3 line-clamp-4 overflow-hidden text-sm leading-relaxed text-primary-foreground/85">
-                      {line.description}
-                    </p>
+                      {line.descricao && (
+                        <p className="mt-3 line-clamp-4 overflow-hidden text-sm leading-relaxed text-primary-foreground/85">
+                          {line.descricao}
+                        </p>
+                      )}
 
-                    <span className="mt-auto flex shrink-0 items-center gap-2 pt-4 text-xs font-semibold uppercase tracking-wide">
-                      Conheça o equipamento
-                      <ArrowRight
-                        size={16}
-                        className="shrink-0 transition-transform duration-300 group-hover:translate-x-2"
-                      />
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                      <span className="mt-auto flex shrink-0 items-center gap-2 pt-4 text-xs font-semibold uppercase tracking-wide">
+                        Conheça o equipamento
+                        <ArrowRight
+                          size={16}
+                          className="shrink-0 transition-transform duration-300 group-hover:translate-x-2"
+                        />
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-full bg-background py-12 text-center text-sm text-muted-foreground">
+                  Nenhuma linha de produto disponível no momento.
+                </div>
+              )}
             </div>
           </div>
         </section>

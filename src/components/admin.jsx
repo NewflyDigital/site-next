@@ -108,6 +108,16 @@ const menuItems = [
     icon: StarIcon,
   },
   {
+    label: "Linhas",
+    href: "/admin/linhas",
+    icon: StarIcon,
+  },
+  {
+    label: "Linhas Home",
+    href: "/admin/home-linhas",
+    icon: StarIcon,
+  },
+  {
     label: "Quem Somos",
     href: "/admin/quem-somos",
     icon: BusinessIcon,

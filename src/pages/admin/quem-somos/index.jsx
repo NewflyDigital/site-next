@@ -24,6 +24,8 @@ import {
   Switch,
   TextField,
   Typography,
+  FormControlLabel,
+  Tooltip,
 } from "@mui/material";
 
 import {
@@ -32,10 +34,23 @@ import {
   Save,
   Refresh,
   Image as ImageIcon,
+  ArrowUpward,
+  ArrowDownward,
+  Visibility,
+  VisibilityOff,
 } from "@mui/icons-material";
 
 const CONFIG_COLLECTION = "paginas";
 const CONFIG_DOCUMENT = "quem-somos";
+
+const SECOES = [
+  { id: "hero", label: "Banner principal" },
+  { id: "historia", label: "Nossa história" },
+  { id: "etapas", label: "Etapas de produção" },
+  { id: "video", label: "Vídeo institucional" },
+  { id: "valores", label: "Missão, visão e valores" },
+  { id: "cta", label: "Chamada para contato" },
+];
 
 const conteudoInicial = {
   seoTitle: "Quem Somos | NEXT Implementos",
@@ -106,6 +121,17 @@ const conteudoInicial = {
   ctaLink: "/contato",
 
   ativo: true,
+
+  sectionsVisibility: {
+    hero: true,
+    historia: true,
+    etapas: true,
+    video: true,
+    valores: true,
+    cta: true,
+  },
+
+  sectionOrder: ["hero", "historia", "etapas", "video", "valores", "cta"],
 };
 
 const camposTexto = [
@@ -165,6 +191,41 @@ const camposTexto = [
   },
 ];
 
+function criarFormulario(dados = {}) {
+  const ordemSalva = Array.isArray(dados.sectionOrder)
+    ? dados.sectionOrder
+    : conteudoInicial.sectionOrder;
+
+  // Mantém as seções novas mesmo quando o documento é antigo.
+  const ordemNormalizada = [
+    ...ordemSalva.filter((id) => SECOES.some((secao) => secao.id === id)),
+    ...SECOES.map((secao) => secao.id).filter((id) => !ordemSalva.includes(id)),
+  ];
+
+  return {
+    ...conteudoInicial,
+    ...dados,
+
+    stages: Array.isArray(dados.stages)
+      ? dados.stages
+      : [...conteudoInicial.stages],
+
+    values: Array.isArray(dados.values)
+      ? dados.values.map((item) => ({
+          title: item?.title || "",
+          description: item?.description || "",
+        }))
+      : conteudoInicial.values.map((item) => ({ ...item })),
+
+    sectionsVisibility: {
+      ...conteudoInicial.sectionsVisibility,
+      ...(dados.sectionsVisibility || {}),
+    },
+
+    sectionOrder: ordemNormalizada,
+  };
+}
+
 function nomeSeguro(nome = "imagem") {
   return nome
     .normalize("NFD")
@@ -172,8 +233,24 @@ function nomeSeguro(nome = "imagem") {
     .replace(/[^a-zA-Z0-9.-]/g, "-");
 }
 
+function moverItem(lista, index, direcao) {
+  const novaLista = [...lista];
+  const destino = index + direcao;
+
+  if (destino < 0 || destino >= novaLista.length) {
+    return novaLista;
+  }
+
+  [novaLista[index], novaLista[destino]] = [
+    novaLista[destino],
+    novaLista[index],
+  ];
+
+  return novaLista;
+}
+
 export default function QuemSomosAdmin() {
-  const [form, setForm] = useState(conteudoInicial);
+  const [form, setForm] = useState(() => criarFormulario());
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -181,6 +258,16 @@ export default function QuemSomosAdmin() {
 
   const [imagemFabrica, setImagemFabrica] = useState(null);
   const [imagemEngenharia, setImagemEngenharia] = useState(null);
+
+  const [previewFabrica, setPreviewFabrica] = useState("");
+  const [previewEngenharia, setPreviewEngenharia] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (previewFabrica) URL.revokeObjectURL(previewFabrica);
+      if (previewEngenharia) URL.revokeObjectURL(previewEngenharia);
+    };
+  }, [previewFabrica, previewEngenharia]);
 
   async function carregarConteudo() {
     setCarregando(true);
@@ -192,28 +279,25 @@ export default function QuemSomosAdmin() {
         doc(db, CONFIG_COLLECTION, CONFIG_DOCUMENT),
       );
 
-      if (snapshot.exists()) {
-        const dados = snapshot.data();
-
-        setForm({
-          ...conteudoInicial,
-          ...dados,
-          stages: Array.isArray(dados.stages)
-            ? dados.stages
-            : conteudoInicial.stages,
-          values: Array.isArray(dados.values)
-            ? dados.values
-            : conteudoInicial.values,
-        });
-      } else {
-        setForm(conteudoInicial);
-      }
+      setForm(criarFormulario(snapshot.exists() ? snapshot.data() : {}));
 
       setImagemFabrica(null);
       setImagemEngenharia(null);
+
+      setPreviewFabrica((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return "";
+      });
+
+      setPreviewEngenharia((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return "";
+      });
     } catch (error) {
       console.error("Erro ao carregar Quem Somos:", error);
-      setErro("Não foi possível carregar o conteúdo do Firestore.");
+      setErro(
+        "Não foi possível carregar o conteúdo. Verifique a conexão com o Firestore e as permissões de leitura.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -232,6 +316,22 @@ export default function QuemSomosAdmin() {
     setSucesso("");
   }
 
+  function alterarVisibilidade(secao, visivel) {
+    setForm((anterior) => ({
+      ...anterior,
+      sectionsVisibility: {
+        ...anterior.sectionsVisibility,
+        [secao]: visivel,
+      },
+    }));
+
+    setSucesso("");
+  }
+
+  function moverSecao(index, direcao) {
+    alterar("sectionOrder", moverItem(form.sectionOrder, index, direcao));
+  }
+
   function alterarEtapa(index, valor) {
     const stages = [...form.stages];
     stages[index] = valor;
@@ -247,6 +347,10 @@ export default function QuemSomosAdmin() {
       "stages",
       form.stages.filter((_, i) => i !== index),
     );
+  }
+
+  function moverEtapa(index, direcao) {
+    alterar("stages", moverItem(form.stages, index, direcao));
   }
 
   function alterarValor(index, campo, valor) {
@@ -271,6 +375,10 @@ export default function QuemSomosAdmin() {
     );
   }
 
+  function moverValor(index, direcao) {
+    alterar("values", moverItem(form.values, index, direcao));
+  }
+
   function selecionarImagem(evento, tipo) {
     const arquivo = evento.target.files?.[0];
 
@@ -288,8 +396,23 @@ export default function QuemSomosAdmin() {
       return;
     }
 
-    if (tipo === "fabrica") setImagemFabrica(arquivo);
-    if (tipo === "engenharia") setImagemEngenharia(arquivo);
+    const preview = URL.createObjectURL(arquivo);
+
+    if (tipo === "fabrica") {
+      setPreviewFabrica((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return preview;
+      });
+      setImagemFabrica(arquivo);
+    }
+
+    if (tipo === "engenharia") {
+      setPreviewEngenharia((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return preview;
+      });
+      setImagemEngenharia(arquivo);
+    }
 
     setErro("");
     setSucesso("");
@@ -305,7 +428,9 @@ export default function QuemSomosAdmin() {
 
     const referencia = ref(storage, caminho);
 
-    await uploadBytes(referencia, arquivo);
+    await uploadBytes(referencia, arquivo, {
+      contentType: arquivo.type,
+    });
 
     return {
       url: await getDownloadURL(referencia),
@@ -328,41 +453,79 @@ export default function QuemSomosAdmin() {
     setSucesso("");
     setSalvando(true);
 
+    let novaImagemFabrica = null;
+    let novaImagemEngenharia = null;
+
     try {
+      const snapshotAtual = await getDoc(
+        doc(db, CONFIG_COLLECTION, CONFIG_DOCUMENT),
+      );
+
+      const dadosAnteriores = snapshotAtual.exists()
+        ? snapshotAtual.data()
+        : {};
+
       const dados = {
         ...form,
-        stages: form.stages.filter((etapa) => etapa.trim()),
-        values: form.values.filter(
-          (item) => item.title.trim() || item.description.trim(),
-        ),
+
+        stages: form.stages
+          .map((etapa) => String(etapa).trim())
+          .filter(Boolean),
+
+        values: form.values
+          .map((item) => ({
+            title: String(item.title || "").trim(),
+            description: String(item.description || "").trim(),
+          }))
+          .filter((item) => item.title || item.description),
+
+        sectionsVisibility: {
+          ...conteudoInicial.sectionsVisibility,
+          ...form.sectionsVisibility,
+        },
+
+        sectionOrder: [
+          ...form.sectionOrder.filter((id) =>
+            SECOES.some((secao) => secao.id === id),
+          ),
+          ...SECOES.map((secao) => secao.id).filter(
+            (id) => !form.sectionOrder.includes(id),
+          ),
+        ],
+
         atualizadoEm: serverTimestamp(),
       };
 
       const arquivosAntigos = [];
 
       if (imagemFabrica) {
-        const novo = await enviarImagem(imagemFabrica, "fabrica");
+        novaImagemFabrica = await enviarImagem(imagemFabrica, "fabrica");
 
-        if (novo) {
-          if (dados.factoryImagePath) {
-            arquivosAntigos.push(dados.factoryImagePath);
-          }
+        if (novaImagemFabrica) {
+          const caminhoAntigo =
+            dadosAnteriores.factoryImagePath || dados.factoryImagePath;
 
-          dados.factoryImage = novo.url;
-          dados.factoryImagePath = novo.path;
+          if (caminhoAntigo) arquivosAntigos.push(caminhoAntigo);
+
+          dados.factoryImage = novaImagemFabrica.url;
+          dados.factoryImagePath = novaImagemFabrica.path;
         }
       }
 
       if (imagemEngenharia) {
-        const novo = await enviarImagem(imagemEngenharia, "engenharia");
+        novaImagemEngenharia = await enviarImagem(
+          imagemEngenharia,
+          "engenharia",
+        );
 
-        if (novo) {
-          if (dados.engineeringImagePath) {
-            arquivosAntigos.push(dados.engineeringImagePath);
-          }
+        if (novaImagemEngenharia) {
+          const caminhoAntigo =
+            dadosAnteriores.engineeringImagePath || dados.engineeringImagePath;
 
-          dados.engineeringImage = novo.url;
-          dados.engineeringImagePath = novo.path;
+          if (caminhoAntigo) arquivosAntigos.push(caminhoAntigo);
+
+          dados.engineeringImage = novaImagemEngenharia.url;
+          dados.engineeringImagePath = novaImagemEngenharia.path;
         }
       }
 
@@ -370,27 +533,97 @@ export default function QuemSomosAdmin() {
         doc(db, CONFIG_COLLECTION, CONFIG_DOCUMENT),
         {
           ...dados,
-          criadoEm: form.criadoEm || serverTimestamp(),
+          criadoEm:
+            dadosAnteriores.criadoEm || form.criadoEm || serverTimestamp(),
         },
         { merge: true },
       );
 
+      // Só apaga as imagens antigas depois que o Firestore salva.
       for (const caminho of arquivosAntigos) {
         await removerArquivoAntigo(caminho);
       }
 
-      setForm(dados);
+      setForm(criarFormulario(dados));
       setImagemFabrica(null);
       setImagemEngenharia(null);
+
+      setPreviewFabrica((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return "";
+      });
+
+      setPreviewEngenharia((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return "";
+      });
+
       setSucesso("Conteúdo de Quem Somos salvo com sucesso.");
     } catch (error) {
       console.error("Erro ao salvar Quem Somos:", error);
+
       setErro(
-        "Não foi possível salvar. Verifique as permissões do Firestore e do Storage.",
+        "Não foi possível salvar. Verifique as permissões do Firestore e do Storage. Se o erro continuar, confira o console do navegador.",
       );
     } finally {
       setSalvando(false);
     }
+  }
+
+  function renderImagem({ titulo, imagemAtual, preview, alt, tipo, arquivo }) {
+    const imagemExibida = preview || imagemAtual;
+
+    return (
+      <Box sx={{ mt: 3 }}>
+        <Typography fontWeight={600} sx={{ mb: 1 }}>
+          {titulo}
+        </Typography>
+
+        {imagemExibida && (
+          <Box
+            component="img"
+            src={imagemExibida}
+            alt={alt || titulo}
+            sx={{
+              display: "block",
+              width: "100%",
+              maxWidth: 560,
+              maxHeight: 280,
+              objectFit: "cover",
+              mb: 2,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          />
+        )}
+
+        <Button component="label" variant="outlined" startIcon={<ImageIcon />}>
+          Substituir imagem
+          <input
+            hidden
+            type="file"
+            accept="image/*"
+            onChange={(e) => selecionarImagem(e, tipo)}
+          />
+        </Button>
+
+        {arquivo && (
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Nova imagem selecionada: {arquivo.name}
+          </Typography>
+        )}
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          sx={{ mt: 1 }}
+        >
+          Formatos de imagem aceitos pelo navegador. Tamanho máximo: 10 MB.
+        </Typography>
+      </Box>
+    );
   }
 
   if (carregando) {
@@ -422,7 +655,8 @@ export default function QuemSomosAdmin() {
             </Typography>
 
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              Edite o conteúdo institucional da NEXT Implementos.
+              Gerencie textos, imagens, seções e ordem de exibição da página
+              institucional.
             </Typography>
           </Box>
 
@@ -470,18 +704,122 @@ export default function QuemSomosAdmin() {
         )}
 
         <Paper sx={{ p: 2, mb: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Switch
-              checked={Boolean(form.ativo)}
-              onChange={(e) => alterar("ativo", e.target.checked)}
-            />
-
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            justifyContent="space-between"
+            spacing={2}
+          >
             <Box>
-              <Typography fontWeight={600}>Página publicada</Typography>
+              <Typography fontWeight={700}>Publicação da página</Typography>
               <Typography variant="body2" color="text.secondary">
-                Controle de publicação para a futura integração com o site.
+                Define se o conteúdo institucional está publicado. A página
+                pública precisará respeitar este campo.
               </Typography>
             </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={Boolean(form.ativo)}
+                  onChange={(e) => alterar("ativo", e.target.checked)}
+                />
+              }
+              label={form.ativo ? "Publicada" : "Desativada"}
+            />
+          </Stack>
+        </Paper>
+
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+            Ordem e visibilidade das seções
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Use as setas para alterar a ordem. Desative uma seção para ocultá-la
+            na página pública. O SEO é mantido independentemente destas seções.
+          </Typography>
+
+          <Stack spacing={1.5}>
+            {form.sectionOrder.map((id, index) => {
+              const secao = SECOES.find((item) => item.id === id);
+
+              if (!secao) return null;
+
+              const visivel = form.sectionsVisibility?.[secao.id] !== false;
+
+              return (
+                <Paper key={secao.id} variant="outlined" sx={{ p: 1.5 }}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    alignItems={{ xs: "stretch", sm: "center" }}
+                    spacing={1}
+                  >
+                    <Typography
+                      sx={{
+                        width: 32,
+                        color: "text.secondary",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </Typography>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography fontWeight={600}>{secao.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {visivel ? "Visível no site" : "Oculta no site"}
+                      </Typography>
+                    </Box>
+
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <Tooltip title="Mover para cima">
+                        <span>
+                          <IconButton
+                            disabled={index === 0}
+                            onClick={() => moverSecao(index, -1)}
+                            aria-label={`Mover ${secao.label} para cima`}
+                          >
+                            <ArrowUpward />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+
+                      <Tooltip title="Mover para baixo">
+                        <span>
+                          <IconButton
+                            disabled={index === form.sectionOrder.length - 1}
+                            onClick={() => moverSecao(index, 1)}
+                            aria-label={`Mover ${secao.label} para baixo`}
+                          >
+                            <ArrowDownward />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+
+                      <FormControlLabel
+                        sx={{ ml: 1, mr: 0 }}
+                        control={
+                          <Switch
+                            checked={visivel}
+                            onChange={(e) =>
+                              alterarVisibilidade(secao.id, e.target.checked)
+                            }
+                          />
+                        }
+                        label={
+                          visivel ? (
+                            <Visibility fontSize="small" />
+                          ) : (
+                            <VisibilityOff fontSize="small" />
+                          )
+                        }
+                      />
+                    </Stack>
+                  </Stack>
+                </Paper>
+              );
+            })}
           </Stack>
         </Paper>
 
@@ -502,24 +840,17 @@ export default function QuemSomosAdmin() {
                   "ctaTitle",
                 ].includes(campo);
 
+                const meiaLargura = [
+                  "seoTitle",
+                  "ogTitle",
+                  "foundingYear",
+                  "heroButton",
+                  "ctaButton",
+                  "ctaLink",
+                ].includes(campo);
+
                 return (
-                  <Grid
-                    item
-                    xs={12}
-                    md={
-                      [
-                        "seoTitle",
-                        "ogTitle",
-                        "foundingYear",
-                        "heroButton",
-                        "ctaButton",
-                        "ctaLink",
-                      ].includes(campo)
-                        ? 6
-                        : 12
-                    }
-                    key={campo}
-                  >
+                  <Grid item xs={12} md={meiaLargura ? 6 : 12} key={campo}>
                     <TextField
                       fullWidth
                       label={label}
@@ -529,8 +860,10 @@ export default function QuemSomosAdmin() {
                       minRows={multiline ? 3 : undefined}
                       helperText={
                         campo === "videoUrl"
-                          ? "Informe a URL completa do YouTube."
-                          : undefined
+                          ? "Cole a URL do vídeo do YouTube. O site público fará a conversão para incorporação."
+                          : campo === "ctaLink"
+                            ? "Ex.: /contato ou uma URL completa."
+                            : undefined
                       }
                     />
                   </Grid>
@@ -538,102 +871,44 @@ export default function QuemSomosAdmin() {
               })}
             </Grid>
 
-            {grupo.titulo === "Banner principal" && (
-              <Box sx={{ mt: 3 }}>
-                <Typography fontWeight={600} sx={{ mb: 1 }}>
-                  Imagem da fábrica
-                </Typography>
+            {grupo.titulo === "Banner principal" &&
+              renderImagem({
+                titulo: "Imagem da fábrica",
+                imagemAtual: form.factoryImage,
+                preview: previewFabrica,
+                alt: form.factoryImageAlt,
+                tipo: "fabrica",
+                arquivo: imagemFabrica,
+              })}
 
-                {form.factoryImage && (
-                  <Box
-                    component="img"
-                    src={form.factoryImage}
-                    alt={form.factoryImageAlt}
-                    sx={{
-                      display: "block",
-                      width: "100%",
-                      maxWidth: 500,
-                      maxHeight: 220,
-                      objectFit: "cover",
-                      mb: 2,
-                      borderRadius: 1,
-                    }}
-                  />
-                )}
-
-                <Button component="label" variant="outlined">
-                  <ImageIcon sx={{ mr: 1 }} />
-                  Substituir imagem da fábrica
-                  <input
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => selecionarImagem(e, "fabrica")}
-                  />
-                </Button>
-
-                {imagemFabrica && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    Arquivo selecionado: {imagemFabrica.name}
-                  </Typography>
-                )}
-              </Box>
-            )}
-
-            {grupo.titulo === "Nossa história" && (
-              <Box sx={{ mt: 3 }}>
-                <Typography fontWeight={600} sx={{ mb: 1 }}>
-                  Imagem de engenharia
-                </Typography>
-
-                {form.engineeringImage && (
-                  <Box
-                    component="img"
-                    src={form.engineeringImage}
-                    alt={form.engineeringImageAlt}
-                    sx={{
-                      display: "block",
-                      width: "100%",
-                      maxWidth: 500,
-                      maxHeight: 220,
-                      objectFit: "cover",
-                      mb: 2,
-                      borderRadius: 1,
-                    }}
-                  />
-                )}
-
-                <Button component="label" variant="outlined">
-                  <ImageIcon sx={{ mr: 1 }} />
-                  Substituir imagem de engenharia
-                  <input
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => selecionarImagem(e, "engenharia")}
-                  />
-                </Button>
-
-                {imagemEngenharia && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    Arquivo selecionado: {imagemEngenharia.name}
-                  </Typography>
-                )}
-              </Box>
-            )}
+            {grupo.titulo === "Nossa história" &&
+              renderImagem({
+                titulo: "Imagem de engenharia",
+                imagemAtual: form.engineeringImage,
+                preview: previewEngenharia,
+                alt: form.engineeringImageAlt,
+                tipo: "engenharia",
+                arquivo: imagemEngenharia,
+              })}
           </Paper>
         ))}
 
         <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", sm: "center" }}
+            spacing={1}
             sx={{ mb: 2 }}
           >
-            <Typography variant="h6" fontWeight={700}>
-              Etapas de produção
-            </Typography>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Etapas de produção
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Edite os nomes, altere a ordem ou remova etapas.
+              </Typography>
+            </Box>
 
             <Button startIcon={<Add />} onClick={adicionarEtapa}>
               Adicionar etapa
@@ -643,12 +918,18 @@ export default function QuemSomosAdmin() {
           <Stack spacing={2}>
             {form.stages.map((etapa, index) => (
               <Stack
-                key={index}
-                direction="row"
+                key={`etapa-${index}`}
+                direction={{ xs: "column", sm: "row" }}
                 spacing={1}
-                alignItems="center"
+                alignItems={{ xs: "stretch", sm: "center" }}
               >
-                <Typography sx={{ width: 32, color: "text.secondary" }}>
+                <Typography
+                  sx={{
+                    width: 32,
+                    color: "text.secondary",
+                    flexShrink: 0,
+                  }}
+                >
                   {String(index + 1).padStart(2, "0")}
                 </Typography>
 
@@ -659,28 +940,59 @@ export default function QuemSomosAdmin() {
                   onChange={(e) => alterarEtapa(index, e.target.value)}
                 />
 
-                <IconButton
-                  color="error"
-                  onClick={() => removerEtapa(index)}
-                  title="Remover etapa"
-                >
-                  <Delete />
-                </IconButton>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    disabled={index === 0}
+                    onClick={() => moverEtapa(index, -1)}
+                    title="Mover para cima"
+                  >
+                    <ArrowUpward />
+                  </IconButton>
+
+                  <IconButton
+                    disabled={index === form.stages.length - 1}
+                    onClick={() => moverEtapa(index, 1)}
+                    title="Mover para baixo"
+                  >
+                    <ArrowDownward />
+                  </IconButton>
+
+                  <IconButton
+                    color="error"
+                    onClick={() => removerEtapa(index)}
+                    title="Remover etapa"
+                  >
+                    <Delete />
+                  </IconButton>
+                </Stack>
               </Stack>
             ))}
+
+            {form.stages.length === 0 && (
+              <Typography color="text.secondary">
+                Nenhuma etapa cadastrada. Clique em “Adicionar etapa”.
+              </Typography>
+            )}
           </Stack>
         </Paper>
 
         <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", sm: "center" }}
+            spacing={1}
             sx={{ mb: 2 }}
           >
-            <Typography variant="h6" fontWeight={700}>
-              Missão, visão e valores
-            </Typography>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Missão, visão e valores
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Os títulos são livres: você pode editar, adicionar, remover e
+                reorganizar os itens.
+              </Typography>
+            </Box>
 
             <Button startIcon={<Add />} onClick={adicionarValor}>
               Adicionar item
@@ -689,7 +1001,7 @@ export default function QuemSomosAdmin() {
 
           <Stack spacing={3}>
             {form.values.map((item, index) => (
-              <Box key={index}>
+              <Box key={`valor-${index}`}>
                 {index > 0 && <Divider sx={{ mb: 3 }} />}
 
                 <Grid container spacing={2} alignItems="flex-start">
@@ -718,17 +1030,44 @@ export default function QuemSomosAdmin() {
                   </Grid>
 
                   <Grid item xs={12} md={1}>
-                    <IconButton
-                      color="error"
-                      onClick={() => removerValor(index)}
-                      title="Remover item"
+                    <Stack
+                      direction={{ xs: "row", md: "column" }}
+                      spacing={0.5}
                     >
-                      <Delete />
-                    </IconButton>
+                      <IconButton
+                        disabled={index === 0}
+                        onClick={() => moverValor(index, -1)}
+                        title="Mover para cima"
+                      >
+                        <ArrowUpward />
+                      </IconButton>
+
+                      <IconButton
+                        disabled={index === form.values.length - 1}
+                        onClick={() => moverValor(index, 1)}
+                        title="Mover para baixo"
+                      >
+                        <ArrowDownward />
+                      </IconButton>
+
+                      <IconButton
+                        color="error"
+                        onClick={() => removerValor(index)}
+                        title="Remover item"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Stack>
                   </Grid>
                 </Grid>
               </Box>
             ))}
+
+            {form.values.length === 0 && (
+              <Typography color="text.secondary">
+                Nenhum item cadastrado. Clique em “Adicionar item”.
+              </Typography>
+            )}
           </Stack>
         </Paper>
 
@@ -736,7 +1075,9 @@ export default function QuemSomosAdmin() {
           fullWidth
           variant="contained"
           size="large"
-          startIcon={<Save />}
+          startIcon={
+            salvando ? <CircularProgress size={18} color="inherit" /> : <Save />
+          }
           onClick={salvar}
           disabled={salvando}
           sx={{ py: 1.5, mb: 4 }}
