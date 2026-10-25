@@ -73,11 +73,11 @@ const Drawer = styled(MuiDrawer, {
 const mdTheme = createTheme({
   palette: {
     primary: {
-      main: "#f19800",
+      main: "#d90820",
       contrastText: "#fff",
     },
     secondary: {
-      main: "#3363AC",
+      main: "#d90820",
       contrastText: "#fff",
     },
     background: {
@@ -301,11 +301,11 @@ export default function Admin({ children, showLoader = false }) {
                       px: open ? 1.5 : 1,
                       justifyContent: open ? "initial" : "center",
                       "&.Mui-selected": {
-                        bgcolor: "rgba(241, 152, 0, 0.14)",
-                        color: "#b87300",
+                        bgcolor: "rgba(217, 8, 32, 0.14)",
+                        color: "#d90820",
                       },
                       "&.Mui-selected:hover": {
-                        bgcolor: "rgba(241, 152, 0, 0.22)",
+                        bgcolor: "rgba(217, 8, 32, 0.22)",
                       },
                     }}
                   >

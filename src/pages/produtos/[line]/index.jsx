@@ -1,12 +1,11 @@
 import Head from "next/head";
 import Link from "next/link";
-import { lineInfo, products } from "../../../../lib/catalog";
 import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
 
 import { db } from "../../../../firebase-config";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export default function LinhaProdutosPage({ line, info, items }) {
   if (!info) return null;
@@ -120,38 +119,98 @@ export default function LinhaProdutosPage({ line, info, items }) {
 }
 
 export async function getServerSideProps({ params }) {
+  const { line } = params;
+
   try {
-    const line = params.line;
-    const snapshot = await getDocs(collection(db, "produtos"));
+    const [snapshotLinhas, snapshotProdutos] = await Promise.all([
+      getDocs(query(collection(db, "linhas"), where("ativo", "==", true))),
+      getDocs(query(collection(db, "produtos"), where("ativo", "==", true))),
+    ]);
 
-    const todosProdutos = snapshot.docs.map((item) => ({
-      id: item.id,
-      ...item.data(),
-    }));
+    const linhas = snapshotLinhas.docs.map((doc) => {
+      const dados = doc.data();
 
-    const items = todosProdutos
+      return {
+        ...dados,
+        id: doc.id,
+        criadoEm: dados.criadoEm?.toDate?.().toISOString() ?? null,
+        atualizadoEm: dados.atualizadoEm?.toDate?.().toISOString() ?? null,
+      };
+    });
+
+    const produtos = snapshotProdutos.docs.map((doc) => {
+      const dados = doc.data();
+
+      return {
+        ...dados,
+        id: doc.id,
+        criadoEm: dados.criadoEm?.toDate?.().toISOString() ?? null,
+        atualizadoEm: dados.atualizadoEm?.toDate?.().toISOString() ?? null,
+      };
+    });
+
+    console.log("========== DIAGNÓSTICO NEXT ==========");
+    console.log("Slug da URL:", line);
+    console.log("Linhas encontradas:", linhas.length);
+    console.log(
+      "Dados das linhas:",
+      linhas.map((item) => ({
+        id: item.id,
+        nome: item.nome,
+        slug: item.slug,
+        ativo: item.ativo,
+      })),
+    );
+
+    console.log("Produtos encontrados:", produtos.length);
+    console.log(
+      "Dados dos produtos:",
+      produtos.map((item) => ({
+        id: item.id,
+        name: item.name,
+        line: item.line,
+        slug: item.slug,
+        ativo: item.ativo,
+      })),
+    );
+
+    const linha = linhas.find(
+      (item) => String(item.slug || "").trim() === line,
+    );
+
+    if (!linha) {
+      console.error("CAUSA: linha não encontrada:", line);
+      return { notFound: true };
+    }
+
+    if (linha.ativo === false) {
+      console.error("CAUSA: linha desativada:", linha);
+      return { notFound: true };
+    }
+
+    const items = produtos
       .filter(
         (product) =>
-          product.line === line &&
+          String(product.line || "").trim() === line &&
           product.ativo !== false &&
           product.name &&
-          product.slug &&
-          product.image,
+          product.slug,
       )
-      .sort((a, b) => String(a.name).localeCompare(String(b.name), "pt-BR"));
+      .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
 
-    // Mantém os dados institucionais das linhas já existentes.
-    // Linhas novas também podem aparecer sem cadastro manual no catálogo local.
-    const info = lineInfo[line] || {
-      label: line
-        .split("-")
-        .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
-        .join(" "),
-      headline: "Conheça nossos equipamentos.",
+    const info = {
+      label: linha.nome || line,
+      headline:
+        linha.headline || `Conheça nossa linha de ${linha.nome || line}.`,
       description:
+        linha.description ||
         "Soluções NEXT desenvolvidas para diferentes operações e segmentos.",
-      image: "/static/images/next-hero.jpg",
+      image: linha.image || "/static/images/next-hero.jpg",
     };
+
+    console.log("Linha selecionada:", linha);
+    console.log("Total de produtos para esta linha:", items.length);
+    console.log("======================================");
 
     return {
       props: {
@@ -161,20 +220,8 @@ export async function getServerSideProps({ params }) {
       },
     };
   } catch (error) {
-    console.error("Erro ao carregar produtos da linha:", error);
+    console.error("ERRO REAL AO CONSULTAR O FIRESTORE:", error);
 
-    return {
-      props: {
-        line: params.line,
-        info: lineInfo[params.line] || {
-          label: params.line,
-          headline: "Conheça nossos equipamentos.",
-          description:
-            "Soluções NEXT desenvolvidas para diferentes operações e segmentos.",
-          image: "/static/images/next-hero.jpg",
-        },
-        items: [],
-      },
-    };
+    throw error;
   }
 }

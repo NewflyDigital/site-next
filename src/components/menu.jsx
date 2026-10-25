@@ -10,11 +10,17 @@ import {
   Search,
   X,
 } from "lucide-react";
-
-import { lineInfo, products } from "../../lib/catalog";
+import { db } from "../../firebase-config";
+import { collection, getDocs } from "firebase/firestore";
+{
+  /*
+  Quando puxava da Lib
+  import { lineInfo, products } from "../../lib/catalog";
 
 const productLines = Object.entries(lineInfo);
 
+  */
+}
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Quem somos", href: "/quem-somos" },
@@ -39,12 +45,61 @@ export default function Menu() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [linhas, setLinhas] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [dadosCarregados, setDadosCarregados] = useState(false);
+
+  useEffect(() => {
+    async function carregarDados() {
+      try {
+        const [snapshotLinhas, snapshotProdutos] = await Promise.all([
+          getDocs(collection(db, "linhas")),
+          getDocs(collection(db, "produtos")),
+        ]);
+
+        const linhasBanco = snapshotLinhas.docs
+          .map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }))
+          .filter((linha) => linha.ativo === true)
+          .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+
+        const produtosBanco = snapshotProdutos.docs
+          .map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }))
+          .filter((produto) => produto.ativo !== false)
+          .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+
+        setLinhas(linhasBanco);
+        setProducts(produtosBanco);
+      } catch (error) {
+        console.error("Erro ao carregar menu da NEXT:", error);
+      } finally {
+        setDadosCarregados(true);
+      }
+    }
+
+    carregarDados();
+  }, []);
+
+  const productLines = linhas.map((linha) => [
+    linha.slug,
+    {
+      ...linha,
+      label: linha.nome,
+      description: linha.description || linha.headline || "",
+    },
+  ]);
+
   const currentLine = productLines.find(([line]) =>
     pathname.startsWith(`/produtos/${line}`),
   )?.[0];
 
   const activeLine = openLine ?? currentLine ?? "guindastes";
-  const activeInfo = lineInfo[activeLine];
+  const activeInfo = productLines.find(([line]) => line === activeLine)?.[1];
 
   const activeProducts = products.filter(
     (product) => product.line === activeLine,
@@ -52,7 +107,8 @@ export default function Menu() {
 
   const previewProduct =
     activeProducts.find((product) => product.slug === previewSlug) ??
-    activeProducts.find((product) => product.featured) ??
+    activeProducts.find((product) => product.featured && product.image) ??
+    activeProducts.find((product) => product.image) ??
     activeProducts[0];
 
   useEffect(() => {
@@ -339,7 +395,7 @@ export default function Menu() {
               <Link
                 href={`/produtos/${activeLine}`}
                 onClick={closeMenus}
-                className="group flex items-center gap-2 text-lg font-bold text-[#171c21] transition-colors hover:text-[#b58a17] xl:text-xl"
+                className="group flex items-center gap-2 text-lg font-bold text-[#171c21] transition-colors hover:text-[#000000] xl:text-xl"
               >
                 Ver todos em {activeInfo.label}
                 <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
@@ -357,7 +413,7 @@ export default function Menu() {
                     onMouseEnter={() => setPreviewSlug(product.slug)}
                     onFocus={() => setPreviewSlug(product.slug)}
                     onClick={closeMenus}
-                    className={`border-l-2 py-2.5 pl-2 text-sm font-medium transition-all hover:border-[#d90820] hover:pl-3 hover:text-[#b58a17] xl:text-base ${
+                    className={`border-l-2 py-2.5 pl-2 text-sm font-medium transition-all hover:border-[#d90820] hover:pl-3 hover:text-[#000000] xl:text-base ${
                       previewProduct?.slug === product.slug
                         ? "border-[#d90820] text-[#171c21]"
                         : "border-transparent text-[#6a7075]"

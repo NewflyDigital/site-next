@@ -59,11 +59,11 @@ const theme = createTheme({
       default: "#fff",
     },
     primary: {
-      main: "#25AAE2",
+      main: "#d90820",
       contrastText: "#fff",
     },
     secondary: {
-      main: "#3363AC",
+      main: "#d90820",
       contrastText: "#fff",
     },
   },

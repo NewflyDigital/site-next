@@ -1,12 +1,11 @@
 import Head from "next/head";
 import Link from "next/link";
-import { getProduct, lineInfo, products } from "../../../../lib/catalog";
 import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
 
 import { db } from "../../../../firebase-config";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 function getYouTubeEmbedUrl(value) {
   if (!value) return "";
@@ -14,7 +13,8 @@ function getYouTubeEmbedUrl(value) {
   const input = String(value).trim();
 
   try {
-    const url = new URL(input);
+    const url = new URL(input.startsWith("http") ? input : `https://${input}`);
+
     const host = url.hostname.replace(/^www\./, "");
     let id = "";
 
@@ -31,11 +31,11 @@ function getYouTubeEmbedUrl(value) {
         "";
     }
 
-    if (id) {
+    if (/^[a-zA-Z0-9_-]{11}$/.test(id)) {
       return `https://www.youtube-nocookie.com/embed/${id}`;
     }
   } catch {
-    // Se não for uma URL, aceita o valor como ID do vídeo.
+    // Se não for uma URL válida, verifica se o valor é um ID.
   }
 
   if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
@@ -45,106 +45,99 @@ function getYouTubeEmbedUrl(value) {
   return "";
 }
 
-export default function ProdutoPage({ product, related, info }) {
-  if (!product) return null;
+export default function ProdutoPage({ product, related = [], info }) {
+  if (!product || !info) {
+    return (
+      <>
+        <Menu />
+        <main className="flex min-h-screen items-center justify-center px-5 pt-32">
+          <div className="text-center">
+            <p className="eyebrow text-primary">Produto indisponível</p>
+            <h1 className="mt-4 font-display text-4xl uppercase">
+              Equipamento não encontrado
+            </h1>
+            <Link
+              href="/produtos"
+              className="mt-8 inline-flex items-center bg-primary px-6 py-3 text-sm font-bold uppercase text-white"
+            >
+              Voltar ao catálogo
+            </Link>
+          </div>
+        </main>
+        <Rodape />
+        <Whats />
+      </>
+    );
+  }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const infoProduto = info;
+  const p = product;
 
   return (
     <>
-      <Head>
-        <title>{product.name} | NEXT Implementos</title>
-        <meta name="description" content={product.description} />
-        <meta
-          property="og:title"
-          content={`${product.name} | NEXT Implementos`}
-        />
-        <meta property="og:description" content={product.description} />
-        <meta property="og:type" content="product" />
-        <meta property="og:image" content={`${siteUrl}${product.image}`} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <link
-          rel="canonical"
-          href={`${siteUrl}/produtos/${product.line}/${product.slug}`}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Product",
-              name: product.name,
-              description: product.description,
-              image: `${siteUrl}${product.image}`,
-              brand: {
-                "@type": "Brand",
-                name: "NEXT Implementos",
-              },
-            }),
-          }}
-        />
-      </Head>
-
       <Menu />
-
       <main>
         <section className="bg-industrial px-5 pb-16 pt-32 text-surface-contrast lg:px-10 lg:pb-20 lg:pt-44">
           <div className="mx-auto max-w-[1480px]">
             <nav
-              className="flex flex-wrap items-center gap-2 text-xs text-surface-contrast/60"
+              className="flex flex-wrap items-center gap-2 text-xs text-surface-contrast/55"
               aria-label="Navegação estrutural"
             >
-              <Link href="/produtos" className="hover:text-primary">
-                Produtos
-              </Link>
+              <Link href="/produtos">Produtos</Link>
               <span>/</span>
-              <Link
-                href={`/produtos/${product.line}`}
-                className="hover:text-primary"
-              >
-                {info.label}
-              </Link>
+              <Link href={`/produtos/${p.line}`}>{infoProduto.label}</Link>
               <span>/</span>
-              <span>{product.name}</span>
+              <span className="text-surface-contrast">{p.name}</span>
             </nav>
 
             <div className="mt-10 grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-              <div>
+              <div className="reveal">
                 <p className="eyebrow text-primary">
-                  {product.family ?? info.label}
-                </p>
-                <h1 className="mt-5 max-w-3xl font-display text-5xl uppercase leading-[0.94] sm:text-7xl lg:text-8xl">
-                  {product.name}
-                </h1>
-                <p className="mt-7 max-w-xl text-lg text-surface-contrast/75">
-                  {product.description}
+                  {p.family ?? infoProduto.label}
                 </p>
 
-                <div className="mt-9 flex flex-wrap gap-3">
+                <h1 className="mt-5 max-w-3xl font-display text-6xl uppercase leading-[0.94] sm:text-7xl lg:text-8xl">
+                  {p.name}
+                </h1>
+
+                <p className="mt-7 max-w-xl text-lg text-surface-contrast/70">
+                  {p.description}
+                </p>
+
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                   <Link
-                    href={`/contato?produto=${encodeURIComponent(product.name)}`}
-                    className="inline-flex min-h-12 items-center justify-center gap-3 bg-primary px-6 py-3 text-sm font-bold uppercase text-white transition-opacity hover:opacity-90"
+                    href={{
+                      pathname: "/contato",
+                      query: { produto: p.name },
+                    }}
+                    className="inline-flex items-center justify-center gap-2 bg-primary px-6 py-3 text-sm font-bold uppercase text-white"
                   >
-                    Solicitar orçamento <span aria-hidden="true">↗</span>
+                    Solicitar orçamento
+                    <span aria-hidden="true">↗</span>
                   </Link>
-                  <Link
-                    href="/contato"
-                    className="inline-flex min-h-12 items-center justify-center border border-surface-contrast/30 px-6 py-3 text-sm font-bold uppercase transition-colors hover:bg-surface-contrast hover:text-industrial"
+
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center gap-2 border border-surface-contrast/25 bg-transparent px-6 py-3 text-sm font-bold uppercase text-surface-contrast opacity-60"
                   >
-                    Falar com especialista
-                  </Link>
+                    Catálogo indisponível
+                    <span aria-hidden="true">↓</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="relative overflow-hidden bg-steel">
-                <img
-                  src={product.image}
-                  alt={`${product.name}, equipamento da NEXT Implementos`}
-                  className="aspect-[16/10] w-full object-cover"
-                  width="1200"
-                  height="750"
-                  fetchPriority="high"
-                />
+              <div className="relative overflow-hidden">
+                {p.image && (
+                  <img
+                    src={p.image}
+                    alt={`${p.name}, equipamento da NEXT Implementos`}
+                    className="aspect-[16/10] w-full object-cover"
+                    width="1200"
+                    height="750"
+                  />
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-industrial/60 to-transparent" />
               </div>
             </div>
           </div>
@@ -174,194 +167,145 @@ export default function ProdutoPage({ product, related, info }) {
           <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.75fr_1.25fr]">
             <div>
               <p className="eyebrow text-primary">Visão geral</p>
+
               <h2 className="mt-5 font-display text-4xl uppercase leading-tight sm:text-5xl">
-                Projetado para o mundo real.
+                {p.overviewTitle || p.name}
               </h2>
             </div>
-            <div>
-              <p className="max-w-3xl text-xl leading-relaxed text-muted-foreground">
-                Uma solução NEXT desenvolvida para integrar-se a operações
-                profissionais com foco em produtividade, segurança e
-                confiabilidade.
-              </p>
-              <p className="mt-6 max-w-3xl text-muted-foreground">
-                Cada configuração é definida conforme as necessidades da
-                operação. Nossa equipe comercial pode orientar a composição
-                adequada e disponibilizar as informações técnicas oficiais do
-                equipamento.
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <section
-          id="diferenciais"
-          className="scroll-mt-36 bg-steel px-5 py-24 lg:px-10"
-        >
-          <div className="mx-auto max-w-[1480px]">
-            <p className="eyebrow text-primary">Diferenciais</p>
-            <div className="mt-8 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                "Engenharia aplicada",
-                "Construção robusta",
-                "Suporte especializado",
-                "Configuração por operação",
-              ].map((item, index) => (
-                <div key={item} className="bg-background p-8">
-                  <span className="font-mono text-xs text-primary">
-                    0{index + 1}
-                  </span>
-                  <div
-                    className="mt-10 text-2xl text-primary"
-                    aria-hidden="true"
-                  >
-                    ✓
-                  </div>
-                  <h3 className="mt-5 font-display text-xl uppercase">
-                    {item}
-                  </h3>
-                </div>
-              ))}
+            <div>
+              {p.overviewText && (
+                <p className="max-w-3xl whitespace-pre-line text-xl leading-relaxed text-muted-foreground">
+                  {p.overviewText}
+                </p>
+              )}
+
+              {p.overviewDetails && (
+                <p className="mt-6 max-w-3xl whitespace-pre-line text-muted-foreground">
+                  {p.overviewDetails}
+                </p>
+              )}
+
+              {!p.overviewText && !p.overviewDetails && p.description && (
+                <p className="max-w-3xl whitespace-pre-line text-xl leading-relaxed text-muted-foreground">
+                  {p.description}
+                </p>
+              )}
             </div>
           </div>
         </section>
+        {p.differentials?.filter(Boolean).length > 0 && (
+          <section
+            id="diferenciais"
+            className="scroll-mt-36 bg-steel px-5 py-24 lg:px-10"
+          >
+            <div className="mx-auto max-w-[1480px]">
+              <p className="eyebrow text-primary">Diferenciais</p>
+
+              <div className="mt-8 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
+                {p.differentials.filter(Boolean).map((item, index) => (
+                  <div className="bg-background p-8" key={`${item}-${index}`}>
+                    <span className="font-mono text-xs text-primary">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+
+                    <span
+                      className="mt-10 block text-2xl text-primary"
+                      aria-hidden="true"
+                    >
+                      ✓
+                    </span>
+
+                    <h3 className="mt-5 font-display text-xl uppercase">
+                      {item}
+                    </h3>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section
           id="especificacoes"
-          className="scroll-mt-36 px-5 py-20 lg:px-10 lg:py-28"
+          className="scroll-mt-36 px-5 py-24 lg:px-10 lg:py-32"
         >
           <div className="mx-auto max-w-[1480px]">
-            {/* Cabeçalho das especificações */}
-            <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
+            <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
               <div>
                 <p className="eyebrow text-primary">Informação técnica</p>
-
-                <h2 className="mt-5 font-display text-4xl uppercase sm:text-5xl">
+                <h2 className="mt-5 font-display text-4xl uppercase">
                   Especificações
                 </h2>
-
-                <p className="mt-5 max-w-md leading-relaxed text-muted-foreground">
-                  Confira os dados técnicos e as informações necessárias para
-                  avaliar a aplicação do equipamento.
-                </p>
               </div>
 
               <div className="border-t-2 border-foreground">
-                {(
-                  product.specifications ?? [
-                    { label: "Capacidade", value: "" },
-                    { label: "Alcance", value: "" },
-                    { label: "Peso", value: "" },
-                    { label: "Configuração", value: "" },
-                    { label: "Aplicação", value: "" },
-                  ]
-                )
-                  .filter((spec) => spec.value)
-                  .map((spec) => (
+                {(p.specifications || [])
+                  .filter((item) => item.label?.trim() || item.value?.trim())
+                  .map((item, index) => (
                     <div
-                      key={spec.label}
-                      className="grid grid-cols-[0.8fr_1.2fr] gap-4 border-b border-border py-5 sm:gap-8"
+                      key={`${item.label}-${index}`}
+                      className="grid grid-cols-[0.8fr_1.2fr] gap-4 border-b border-border py-5"
                     >
                       <span className="font-semibold uppercase">
-                        {spec.label}
+                        {item.label}
                       </span>
 
-                      <span className="text-muted-foreground">
-                        {spec.value}
+                      <span className="whitespace-pre-line text-muted-foreground">
+                        {item.value}
                       </span>
                     </div>
                   ))}
 
-                {!product.specifications?.some((spec) => spec.value) && (
-                  <p className="py-5 text-sm text-muted-foreground">
-                    Consulte nossa equipe para obter as especificações técnicas
-                    deste modelo.
+                {(!p.specifications ||
+                  !p.specifications.some(
+                    (item) => item.label?.trim() || item.value?.trim(),
+                  )) && (
+                  <p className="py-5 text-muted-foreground">
+                    As especificações técnicas deste equipamento serão
+                    disponibilizadas em breve.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Gráfico de carga: faixa vermelha e imagem */}
-            {(product.loadChart || product.loadChartPdf) && (
-              <div className="mt-16 lg:mt-20">
-                <div className="flex w-full flex-col gap-4 bg-primary px-5 py-6 text-white sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-                  <div className="flex items-center gap-4">
-                    <span
-                      className="flex size-12 shrink-0 items-center justify-center border border-white/40 text-2xl"
-                      aria-hidden="true"
-                    >
-                      ↗
-                    </span>
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
-                        Informação técnica
-                      </p>
-
-                      <h3 className="mt-1 font-display text-xl uppercase sm:text-2xl">
-                        Gráfico de carga
-                      </h3>
-                    </div>
-                  </div>
-
-                  {product.loadChartPdf && (
-                    <a
-                      href={product.loadChartPdf}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-3 border border-white/60 px-5 py-3 text-sm font-bold uppercase text-white transition-colors hover:bg-white hover:text-primary sm:w-auto"
-                    >
-                      Baixar gráfico
-                      <span aria-hidden="true">↓</span>
-                    </a>
-                  )}
+            {/* Gráfico de carga */}
+            {p.loadChart && (
+              <div className="mt-16 w-full">
+                <div className="w-full bg-red-600 px-6 py-5 text-center text-sm font-bold uppercase tracking-wide text-white sm:text-base">
+                  Gráfico de carga
                 </div>
 
-                {product.loadChart && (
-                  <div className="flex w-full items-center justify-center border border-border bg-white p-4 sm:p-8 lg:p-12">
-                    <img
-                      src={product.loadChart}
-                      alt={`Gráfico de carga do equipamento ${product.name}`}
-                      loading="lazy"
-                      className="h-auto max-h-[1000px] w-full object-contain"
-                    />
-                  </div>
-                )}
+                <div className="mt-6 w-full overflow-hidden">
+                  <img
+                    src={p.loadChart}
+                    alt={`Gráfico de carga do equipamento ${p.name}`}
+                    className="block h-auto w-full object-contain"
+                  />
+                </div>
               </div>
             )}
           </div>
         </section>
 
-        {/* Vídeo do produto */}
-        {product.videoUrl && (
-          <section className="px-5 py-20 lg:px-10 lg:py-28">
-            <div className="mx-auto max-w-[1480px]">
-              <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
-                <div>
-                  <p className="eyebrow text-primary">Na prática</p>
-                  <h2 className="mt-5 font-display text-4xl uppercase leading-tight sm:text-5xl">
-                    Conheça o equipamento em ação.
-                  </h2>
-                </div>
+        {p.videoUrl && (
+          <div className="mt-16 w-full">
+            <div className="w-full bg-red-600 px-6 py-5 text-center text-base font-bold uppercase tracking-wider text-white sm:text-lg">
+              Vídeo do equipamento
+            </div>
 
-                <p className="max-w-2xl leading-relaxed text-muted-foreground">
-                  Veja mais detalhes sobre o equipamento, suas aplicações e como
-                  ele pode integrar a sua operação.
-                </p>
-              </div>
-
-              <div className="relative mt-10 aspect-video w-full overflow-hidden bg-industrial">
+            <div className="mt-6 w-full overflow-hidden bg-black">
+              <div className="aspect-video w-full">
                 <iframe
-                  src={getYouTubeEmbedUrl(product.videoUrl)}
-                  title={`Vídeo do equipamento ${product.name}`}
-                  className="absolute inset-0 size-full"
+                  src={getYouTubeEmbedUrl(p.videoUrl)}
+                  title={`Vídeo de ${p.name}`}
+                  className="h-full w-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
-                  loading="lazy"
                 />
               </div>
             </div>
-          </section>
+          </div>
         )}
 
         {related.length > 0 && (
@@ -377,11 +321,12 @@ export default function ProdutoPage({ product, related, info }) {
                     Outros modelos
                   </h2>
                 </div>
+
                 <Link
-                  href={`/produtos/${product.line}`}
-                  className="hidden border border-surface-contrast/30 px-5 py-3 text-xs font-bold uppercase transition-colors hover:bg-surface-contrast hover:text-industrial sm:inline-flex"
+                  href={`/produtos/${p.line}`}
+                  className="hidden items-center gap-2 border border-surface-contrast/30 px-5 py-3 text-sm font-bold uppercase text-surface-contrast sm:inline-flex"
                 >
-                  Ver a linha →
+                  Ver a linha <span aria-hidden="true">→</span>
                 </Link>
               </div>
 
@@ -393,23 +338,31 @@ export default function ProdutoPage({ product, related, info }) {
                     className="group border border-surface-contrast/15"
                   >
                     <div className="overflow-hidden">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        loading="lazy"
-                        className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          loading="lazy"
+                          className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        />
+                      )}
                     </div>
-                    <div className="flex items-center justify-between gap-4 p-6">
+
+                    <div className="flex items-center justify-between p-6">
                       <div>
                         <p className="eyebrow text-primary">
-                          {item.family ?? info.label}
+                          {item.family ?? infoProduto.label}
                         </p>
                         <h3 className="mt-2 font-display text-xl uppercase">
                           {item.name}
                         </h3>
                       </div>
-                      <span aria-hidden="true">↗</span>
+                      <span
+                        aria-hidden="true"
+                        className="transition-transform group-hover:translate-x-1"
+                      >
+                        →
+                      </span>
                     </div>
                   </Link>
                 ))}
@@ -418,22 +371,40 @@ export default function ProdutoPage({ product, related, info }) {
           </section>
         )}
 
-        <section className="bg-primary px-5 py-20 text-white lg:px-10">
+        <section className="bg-primary px-5 py-20 text-primary-foreground lg:px-10">
           <div className="mx-auto flex max-w-[1480px] flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
             <div>
-              <p className="eyebrow text-white/75">Fale com um especialista</p>
+              <p className="eyebrow text-primary-foreground/70">
+                Fale com um especialista
+              </p>
               <h2 className="mt-4 max-w-3xl font-display text-4xl uppercase leading-tight sm:text-5xl">
                 Precisa deste equipamento na sua operação?
               </h2>
             </div>
+
             <Link
-              href={`/contato?produto=${encodeURIComponent(product.name)}`}
-              className="inline-flex min-h-12 items-center justify-center gap-3 bg-white px-6 py-3 text-sm font-bold uppercase text-industrial transition-opacity hover:opacity-90"
+              href={{
+                pathname: "/contato",
+                query: { produto: p.name },
+              }}
+              className="inline-flex items-center gap-2 bg-background px-6 py-4 text-sm font-bold uppercase text-foreground"
             >
-              Solicitar orçamento →
+              Solicitar orçamento <span aria-hidden="true">→</span>
             </Link>
           </div>
         </section>
+
+        <aside className="fixed bottom-6 right-6 z-30 hidden md:block">
+          <Link
+            href={{
+              pathname: "/contato",
+              query: { produto: p.name },
+            }}
+            className="inline-flex items-center bg-industrial px-6 py-4 text-sm font-bold uppercase text-surface-contrast shadow-menu"
+          >
+            Solicitar orçamento
+          </Link>
+        </aside>
       </main>
 
       <Rodape />
@@ -444,41 +415,58 @@ export default function ProdutoPage({ product, related, info }) {
 
 export async function getServerSideProps({ params }) {
   try {
-    const snapshot = await getDocs(collection(db, "produtos"));
+    const { line, slug } = params;
 
-    // Converte os documentos do Firestore em objetos serializáveis
-    const produtos = snapshot.docs.map((item) => {
+    const [snapshotProdutos, snapshotLinhas] = await Promise.all([
+      getDocs(query(collection(db, "produtos"), where("ativo", "==", true))),
+      getDocs(query(collection(db, "linhas"), where("ativo", "==", true))),
+    ]);
+
+    const produtos = snapshotProdutos.docs.map((item) => {
       const dados = item.data();
 
       return {
-        id: item.id,
         ...dados,
+        id: item.id,
         criadoEm: dados.criadoEm?.toDate?.().toISOString() ?? null,
         atualizadoEm: dados.atualizadoEm?.toDate?.().toISOString() ?? null,
       };
     });
 
-    // Localiza o produto solicitado pela URL
+    const linhas = snapshotLinhas.docs.map((item) => {
+      const dados = item.data();
+
+      return {
+        ...dados,
+        id: item.id,
+        criadoEm: dados.criadoEm?.toDate?.().toISOString() ?? null,
+        atualizadoEm: dados.atualizadoEm?.toDate?.().toISOString() ?? null,
+      };
+    });
+
     const product = produtos.find(
       (item) =>
-        item.line === params.line &&
-        item.slug === params.slug &&
-        item.ativo !== false,
+        item.line === line && item.slug === slug && item.ativo !== false,
     );
 
     if (!product) {
       return { notFound: true };
     }
 
-    // Informações da linha do equipamento
-    const info = lineInfo[product.line] || {
-      label: product.line,
-      description: "Conheça as soluções da NEXT Implementos para sua operação.",
-      headline: product.name,
-      image: product.image || "/static/images/next-hero.jpg",
+    const linha = linhas.find((item) => item.slug === product.line);
+
+    const info = {
+      label: linha?.nome || product.line,
+      description:
+        linha?.description ||
+        linha?.headline ||
+        "Conheça as soluções da NEXT Implementos para sua operação.",
+      headline:
+        linha?.headline ||
+        `Conheça nossa linha de ${linha?.nome || product.line}.`,
+      image: linha?.image || product.image || "/static/images/next-hero.jpg",
     };
 
-    // Produtos relacionados da mesma linha
     const related = produtos
       .filter(
         (item) =>
@@ -486,11 +474,38 @@ export async function getServerSideProps({ params }) {
           item.line === product.line &&
           item.ativo !== false &&
           item.name &&
-          item.slug &&
-          item.image,
+          item.slug,
       )
-      .sort((a, b) => String(a.name).localeCompare(String(b.name), "pt-BR"))
+      .sort((a, b) =>
+        String(a.ordem ?? 0).localeCompare(String(b.ordem ?? 0), "pt-BR", {
+          numeric: true,
+        }),
+      )
       .slice(0, 3);
+
+    console.log("========== DIAGNÓSTICO PRODUTO ==========");
+    console.log("Parâmetros da URL:", { line, slug });
+
+    console.log(
+      "Produtos:",
+      produtos.map((item) => ({
+        id: item.id,
+        name: item.name,
+        line: item.line,
+        slug: item.slug,
+        ativo: item.ativo,
+      })),
+    );
+
+    console.log(
+      "Linhas:",
+      linhas.map((item) => ({
+        id: item.id,
+        nome: item.nome,
+        slug: item.slug,
+        ativo: item.ativo,
+      })),
+    );
 
     return {
       props: {
@@ -500,8 +515,7 @@ export async function getServerSideProps({ params }) {
       },
     };
   } catch (error) {
-    console.error("Erro ao carregar página do produto:", error);
-
-    return { notFound: true };
+    console.error("ERRO REAL AO CARREGAR O PRODUTO:", error);
+    throw error;
   }
 }

@@ -19,6 +19,8 @@ import {
   uploadBytes,
 } from "firebase/storage";
 
+import { MenuItem, FormControl, InputLabel, Select } from "@mui/material";
+
 import {
   Alert,
   Box,
@@ -65,13 +67,22 @@ const produtoVazio = {
   line: "",
   family: "",
   description: "",
+
+  overviewTitle: "",
+  overviewText: "",
+  overviewDetails: "",
+
+  differentials: [],
+  specifications: [],
+
   image: "",
   imagePath: "",
-  specifications: [],
+
   loadChart: "",
   loadChartPath: "",
   loadChartPdf: "",
   loadChartPdfPath: "",
+
   videoUrl: "",
   ativo: true,
   ordem: 0,
@@ -133,7 +144,31 @@ export default function ProdutosAdmin() {
 
   useEffect(() => {
     carregarProdutos();
+    carregarLinhas();
   }, []);
+
+  const [linhas, setLinhas] = useState([]);
+
+  async function carregarLinhas() {
+    try {
+      const snapshot = await getDocs(collection(db, "linhas"));
+
+      const dados = snapshot.docs
+        .map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }))
+        .filter((linha) => linha.ativo === true)
+        .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+
+      setLinhas(dados);
+
+      console.log("Linhas carregadas:", dados);
+    } catch (error) {
+      console.error("Erro ao carregar linhas:", error);
+      setErro("Não foi possível carregar as linhas cadastradas.");
+    }
+  }
 
   function abrirNovo() {
     setProdutoId(null);
@@ -294,6 +329,15 @@ export default function ProdutosAdmin() {
         line: form.line.trim(),
         family: form.family.trim(),
         description: form.description.trim(),
+
+        overviewTitle: form.overviewTitle?.trim() || "",
+        overviewText: form.overviewText?.trim() || "",
+        overviewDetails: form.overviewDetails?.trim() || "",
+
+        differentials: (form.differentials || [])
+          .map((item) => item.trim())
+          .filter(Boolean),
+
         image: form.image || "",
         imagePath: form.imagePath || "",
         specifications: (form.specifications || [])
@@ -713,14 +757,29 @@ export default function ProdutosAdmin() {
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Linha do produto"
-                    placeholder="Ex.: Plataformas"
-                    value={form.line}
-                    onChange={(e) => atualizarCampo("line", e.target.value)}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel id="linha-produto-label">
+                      Linha do produto
+                    </InputLabel>
+
+                    <Select
+                      labelId="linha-produto-label"
+                      label="Linha do produto"
+                      value={form.line || ""}
+                      onChange={(e) =>
+                        setForm((atual) => ({
+                          ...atual,
+                          line: e.target.value,
+                        }))
+                      }
+                    >
+                      {linhas.map((linha) => (
+                        <MenuItem key={linha.id} value={linha.slug}>
+                          {linha.nome}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
@@ -820,6 +879,121 @@ export default function ProdutosAdmin() {
             </Box>
 
             <Divider />
+
+            <Box>
+              <Typography fontWeight={700} sx={{ mb: 2 }}>
+                Visão geral do produto
+              </Typography>
+
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Título da visão geral"
+                  placeholder="Ex.: Projetado para operações exigentes"
+                  value={form.overviewTitle}
+                  onChange={(e) =>
+                    atualizarCampo("overviewTitle", e.target.value)
+                  }
+                  helperText="Título exibido na seção Visão geral da página."
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  label="Texto principal"
+                  placeholder="Apresente a proposta e os principais benefícios do equipamento."
+                  value={form.overviewText}
+                  onChange={(e) =>
+                    atualizarCampo("overviewText", e.target.value)
+                  }
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  label="Texto complementar"
+                  placeholder="Explique aplicações, configurações ou características importantes."
+                  value={form.overviewDetails}
+                  onChange={(e) =>
+                    atualizarCampo("overviewDetails", e.target.value)
+                  }
+                />
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 2 }}
+              >
+                <Typography fontWeight={700}>
+                  Diferenciais do produto
+                </Typography>
+
+                <Button
+                  size="small"
+                  startIcon={<Add />}
+                  onClick={() =>
+                    atualizarCampo("differentials", [
+                      ...(form.differentials || []),
+                      "",
+                    ])
+                  }
+                >
+                  Adicionar diferencial
+                </Button>
+              </Stack>
+
+              <Stack spacing={2}>
+                {(form.differentials || []).map((diferencial, index) => (
+                  <Stack
+                    key={index}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                  >
+                    <TextField
+                      fullWidth
+                      label={`Diferencial ${String(index + 1).padStart(2, "0")}`}
+                      placeholder="Ex.: Estrutura reforçada para operações intensivas"
+                      value={diferencial}
+                      onChange={(e) => {
+                        const novos = [...(form.differentials || [])];
+                        novos[index] = e.target.value;
+                        atualizarCampo("differentials", novos);
+                      }}
+                    />
+
+                    <IconButton
+                      color="error"
+                      title="Remover diferencial"
+                      onClick={() =>
+                        atualizarCampo(
+                          "differentials",
+                          (form.differentials || []).filter(
+                            (_, i) => i !== index,
+                          ),
+                        )
+                      }
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Stack>
+                ))}
+
+                {(!form.differentials || form.differentials.length === 0) && (
+                  <Typography variant="body2" color="text.secondary">
+                    Nenhum diferencial adicionado.
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
 
             <Box>
               <Stack
