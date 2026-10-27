@@ -77,6 +77,7 @@ const produtoVazio = {
 
   image: "",
   imagePath: "",
+  images: [],
 
   loadChart: "",
   loadChartPath: "",
@@ -118,6 +119,11 @@ export default function ProdutosAdmin() {
   const [imagemArquivo, setImagemArquivo] = useState(null);
   const [graficoArquivo, setGraficoArquivo] = useState(null);
   const [pdfArquivo, setPdfArquivo] = useState(null);
+
+  const [imagensSecundariasArquivos, setImagensSecundariasArquivos] = useState(
+    [],
+  );
+  const [imagensRemovidas, setImagensRemovidas] = useState([]);
 
   async function carregarProdutos() {
     setCarregando(true);
@@ -179,6 +185,8 @@ export default function ProdutosAdmin() {
     setErro("");
     setSucesso("");
     setModalAberto(true);
+    setImagensSecundariasArquivos([]);
+    setImagensRemovidas([]);
   }
 
   function abrirEdicao(produto) {
@@ -190,6 +198,7 @@ export default function ProdutosAdmin() {
       specifications: Array.isArray(produto.specifications)
         ? produto.specifications
         : [],
+      images: Array.isArray(produto.images) ? produto.images : [],
     });
 
     setImagemArquivo(null);
@@ -198,6 +207,53 @@ export default function ProdutosAdmin() {
     setErro("");
     setSucesso("");
     setModalAberto(true);
+    setImagensSecundariasArquivos([]);
+    setImagensRemovidas([]);
+  }
+
+  function selecionarImagensSecundarias(evento) {
+    const arquivos = Array.from(evento.target.files || []);
+    const arquivosValidos = [];
+
+    for (const arquivo of arquivos) {
+      if (!arquivo.type.startsWith("image/")) {
+        setErro(`"${arquivo.name}" não é uma imagem válida.`);
+        continue;
+      }
+
+      if (arquivo.size > 10 * 1024 * 1024) {
+        setErro(`"${arquivo.name}" ultrapassa o limite de 10 MB.`);
+        continue;
+      }
+
+      arquivosValidos.push(arquivo);
+    }
+
+    setImagensSecundariasArquivos((anteriores) => [
+      ...anteriores,
+      ...arquivosValidos,
+    ]);
+
+    evento.target.value = "";
+  }
+
+  function removerImagemSecundariaExistente(index) {
+    const imagem = form.images[index];
+
+    if (imagem?.path) {
+      setImagensRemovidas((anteriores) => [...anteriores, imagem.path]);
+    }
+
+    atualizarCampo(
+      "images",
+      form.images.filter((_, i) => i !== index),
+    );
+  }
+
+  function removerImagemSecundariaNova(index) {
+    setImagensSecundariasArquivos((anteriores) =>
+      anteriores.filter((_, i) => i !== index),
+    );
   }
 
   function atualizarCampo(campo, valor) {
@@ -340,16 +396,22 @@ export default function ProdutosAdmin() {
 
         image: form.image || "",
         imagePath: form.imagePath || "",
+
         specifications: (form.specifications || [])
           .filter((item) => item.label?.trim() || item.value?.trim())
           .map((item) => ({
             label: item.label?.trim() || "",
             value: item.value?.trim() || "",
           })),
+
+        // Preserva as imagens secundárias existentes
+        images: Array.isArray(form.images) ? [...form.images] : [],
+
         loadChart: form.loadChart || "",
         loadChartPath: form.loadChartPath || "",
         loadChartPdf: form.loadChartPdf || "",
         loadChartPdfPath: form.loadChartPdfPath || "",
+
         videoUrl: form.videoUrl.trim(),
         ativo: Boolean(form.ativo),
         ordem: Number(form.ordem) || 0,
@@ -358,17 +420,21 @@ export default function ProdutosAdmin() {
 
       const arquivosAntigos = [];
 
+      // Upload da imagem principal
       if (imagemArquivo) {
         const novo = await enviarArquivo(imagemArquivo, "produtos/imagens");
 
         if (novo) {
-          if (dados.imagePath) arquivosAntigos.push(dados.imagePath);
+          if (dados.imagePath) {
+            arquivosAntigos.push(dados.imagePath);
+          }
 
           dados.image = novo.url;
           dados.imagePath = novo.path;
         }
       }
 
+      // Upload do gráfico de carga
       if (graficoArquivo) {
         const novo = await enviarArquivo(graficoArquivo, "produtos/graficos");
 
@@ -382,6 +448,7 @@ export default function ProdutosAdmin() {
         }
       }
 
+      // Upload do PDF técnico
       if (pdfArquivo) {
         const novo = await enviarArquivo(pdfArquivo, "produtos/documentos");
 
@@ -395,6 +462,22 @@ export default function ProdutosAdmin() {
         }
       }
 
+      // Upload das imagens secundárias ANTES de gravar no Firestore
+      for (const arquivo of imagensSecundariasArquivos) {
+        const novo = await enviarArquivo(
+          arquivo,
+          "produtos/imagens-secundarias",
+        );
+
+        if (novo) {
+          dados.images.push({
+            url: novo.url,
+            path: novo.path,
+          });
+        }
+      }
+
+      // Grava o documento somente depois de todos os uploads
       if (produtoId) {
         await updateDoc(doc(db, COLLECTION, produtoId), dados);
       } else {
@@ -404,20 +487,31 @@ export default function ProdutosAdmin() {
         });
       }
 
+      // Remove arquivos antigos substituídos
       for (const caminho of arquivosAntigos) {
         await removerArquivoStorage(caminho);
       }
 
+      // Remove imagens secundárias marcadas para exclusão
+      for (const caminho of imagensRemovidas) {
+        await removerArquivoStorage(caminho);
+      }
+
       setModalAberto(false);
+
       setSucesso(
         produtoId
           ? "Produto atualizado com sucesso."
           : "Produto cadastrado com sucesso.",
       );
 
+      setImagensSecundariasArquivos([]);
+      setImagensRemovidas([]);
+
       await carregarProdutos();
     } catch (error) {
       console.error("Erro ao salvar produto:", error);
+
       setErro(
         "Não foi possível salvar o produto. Verifique as permissões do Firebase e tente novamente.",
       );
@@ -462,6 +556,10 @@ export default function ProdutosAdmin() {
         removerArquivoStorage(produto.imagePath),
         removerArquivoStorage(produto.loadChartPath),
         removerArquivoStorage(produto.loadChartPdfPath),
+
+        ...(Array.isArray(produto.images)
+          ? produto.images.map((imagem) => removerArquivoStorage(imagem.path))
+          : []),
       ]);
 
       setSucesso("Produto excluído com sucesso.");
@@ -836,32 +934,47 @@ export default function ProdutosAdmin() {
                 onChange={(e) => atualizarCampo("description", e.target.value)}
               />
 
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                  Imagem principal
+              {/* IMAGEM PRINCIPAL */}
+              <Box>
+                <Typography fontWeight={700} sx={{ mb: 1 }}>
+                  Imagem principal do produto
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Esta é a foto utilizada nos cards e no catálogo do site.
                 </Typography>
 
                 {form.image && !imagemArquivo && (
                   <Box
                     component="img"
                     src={form.image}
-                    alt="Imagem atual do produto"
+                    alt="Imagem principal atual"
                     sx={{
                       display: "block",
                       width: "100%",
-                      maxWidth: 300,
-                      maxHeight: 180,
+                      maxWidth: 320,
+                      height: 200,
                       objectFit: "contain",
-                      mb: 1,
+                      mb: 2,
                       bgcolor: "#f5f5f5",
                       borderRadius: 1,
                     }}
                   />
                 )}
 
+                {imagemArquivo && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Nova imagem principal: {imagemArquivo.name}
+                  </Typography>
+                )}
+
                 <Button component="label" variant="outlined">
                   <ImageIcon sx={{ mr: 1 }} />
-                  Selecionar imagem
+                  Selecionar imagem principal
                   <input
                     hidden
                     type="file"
@@ -869,12 +982,142 @@ export default function ProdutosAdmin() {
                     onChange={(e) => selecionarArquivo(e, "imagem")}
                   />
                 </Button>
+              </Box>
 
-                {imagemArquivo && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    Novo arquivo: {imagemArquivo.name}
-                  </Typography>
+              <Divider />
+
+              {/* GALERIA DE IMAGENS SECUNDÁRIAS */}
+              <Box>
+                <Typography fontWeight={700} sx={{ mb: 1 }}>
+                  Imagens secundárias / galeria
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Adicione fotos extras do equipamento. Elas serão exibidas na
+                  página de detalhes do produto, separadamente da imagem
+                  principal.
+                </Typography>
+
+                <Button component="label" variant="outlined">
+                  <Add sx={{ mr: 1 }} />
+                  Adicionar imagens secundárias
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={selecionarImagensSecundarias}
+                  />
+                </Button>
+
+                {(form.images?.length > 0 ||
+                  imagensSecundariasArquivos.length > 0) && (
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    {form.images.map((imagem, index) => (
+                      <Grid
+                        item
+                        xs={6}
+                        sm={4}
+                        md={3}
+                        key={imagem.path || imagem.url || index}
+                      >
+                        <Paper variant="outlined" sx={{ p: 1 }}>
+                          <Box
+                            component="img"
+                            src={imagem.url}
+                            alt={`Imagem secundária ${index + 1}`}
+                            sx={{
+                              width: "100%",
+                              height: 120,
+                              objectFit: "contain",
+                              bgcolor: "#f5f5f5",
+                              borderRadius: 1,
+                            }}
+                          />
+
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{ mt: 1, mb: 1 }}
+                          >
+                            Imagem {index + 1}
+                          </Typography>
+
+                          <Button
+                            color="error"
+                            size="small"
+                            fullWidth
+                            startIcon={<Delete />}
+                            onClick={() =>
+                              removerImagemSecundariaExistente(index)
+                            }
+                          >
+                            Remover
+                          </Button>
+                        </Paper>
+                      </Grid>
+                    ))}
+
+                    {imagensSecundariasArquivos.map((arquivo, index) => (
+                      <Grid
+                        item
+                        xs={6}
+                        sm={4}
+                        md={3}
+                        key={`${arquivo.name}-${index}`}
+                      >
+                        <Paper variant="outlined" sx={{ p: 1 }}>
+                          <Box
+                            component="img"
+                            src={URL.createObjectURL(arquivo)}
+                            alt={arquivo.name}
+                            sx={{
+                              width: "100%",
+                              height: 120,
+                              objectFit: "contain",
+                              bgcolor: "#f5f5f5",
+                              borderRadius: 1,
+                            }}
+                          />
+
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{ mt: 1, mb: 1 }}
+                            noWrap
+                          >
+                            {arquivo.name}
+                          </Typography>
+
+                          <Button
+                            color="error"
+                            size="small"
+                            fullWidth
+                            startIcon={<Delete />}
+                            onClick={() => removerImagemSecundariaNova(index)}
+                          >
+                            Remover
+                          </Button>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
                 )}
+
+                {(!form.images || form.images.length === 0) &&
+                  imagensSecundariasArquivos.length === 0 && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 2 }}
+                    >
+                      Nenhuma imagem secundária adicionada.
+                    </Typography>
+                  )}
               </Box>
             </Box>
 

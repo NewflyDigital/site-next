@@ -3,6 +3,7 @@ import Link from "next/link";
 import Menu from "../../../components/menu";
 import Rodape from "../../../components/rodape";
 import Whats from "../../../components/whats";
+import { useState } from "react";
 
 import { db } from "../../../../firebase-config";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -46,7 +47,32 @@ function getYouTubeEmbedUrl(value) {
 }
 
 export default function ProdutoPage({ product, related = [], info }) {
-  if (!product || !info) {
+  const p = product;
+  const infoProduto = info;
+
+  const imagensProduto = [
+    ...(p?.image ? [{ url: p.image, alt: p.name }] : []),
+    ...(Array.isArray(p?.images)
+      ? p.images
+          .filter((imagem) => imagem?.url)
+          .map((imagem, index) => ({
+            url: imagem.url,
+            alt: `${p.name} - imagem ${index + 2}`,
+          }))
+      : []),
+  ];
+
+  const [imagemSelecionada, setImagemSelecionada] = useState(0);
+
+  function navegarGaleria(direcao) {
+    setImagemSelecionada((atual) => {
+      if (imagensProduto.length <= 1) return 0;
+
+      return (atual + direcao + imagensProduto.length) % imagensProduto.length;
+    });
+  }
+
+  if (!p || !infoProduto) {
     return (
       <>
         <Menu />
@@ -70,8 +96,7 @@ export default function ProdutoPage({ product, related = [], info }) {
     );
   }
 
-  const infoProduto = info;
-  const p = product;
+  // Mantenha aqui o restante do JSX atual da página.
 
   return (
     <>
@@ -127,17 +152,83 @@ export default function ProdutoPage({ product, related = [], info }) {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden">
-                {p.image && (
-                  <img
-                    src={p.image}
-                    alt={`${p.name}, equipamento da NEXT Implementos`}
-                    className="aspect-[16/10] w-full object-cover"
-                    width="1200"
-                    height="750"
-                  />
+              <div className="min-w-0">
+                {/* Imagem principal */}
+                <div className="group relative overflow-hidden bg-white/5">
+                  {imagensProduto.length > 0 ? (
+                    <>
+                      <img
+                        key={imagensProduto[imagemSelecionada]?.url}
+                        src={imagensProduto[imagemSelecionada]?.url}
+                        alt={
+                          imagensProduto[imagemSelecionada]?.alt ||
+                          `${p.name}, equipamento da NEXT Implementos`
+                        }
+                        className="aspect-[16/10] w-full object-contain transition-opacity duration-300 sm:object-cover"
+                        width="1200"
+                        height="750"
+                      />
+
+                      {/* Setas para navegar entre as imagens */}
+                      {imagensProduto.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => navegarGaleria(-1)}
+                            aria-label="Ver imagem anterior"
+                            className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/30 bg-industrial/80 text-2xl text-white transition hover:bg-primary"
+                          >
+                            ‹
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => navegarGaleria(1)}
+                            aria-label="Ver próxima imagem"
+                            className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/30 bg-industrial/80 text-2xl text-white transition hover:bg-primary"
+                          >
+                            ›
+                          </button>
+
+                          <span className="absolute bottom-3 right-3 bg-industrial/85 px-3 py-1 text-xs font-bold text-white">
+                            {imagemSelecionada + 1} / {imagensProduto.length}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex aspect-[16/10] items-center justify-center text-sm text-surface-contrast/60">
+                      Imagem indisponível
+                    </div>
+                  )}
+                </div>
+
+                {/* Miniaturas abaixo da imagem principal */}
+                {imagensProduto.length > 1 && (
+                  <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-4 xl:grid-cols-5">
+                    {imagensProduto.map((imagem, index) => (
+                      <button
+                        key={`${imagem.url}-${index}`}
+                        type="button"
+                        onClick={() => setImagemSelecionada(index)}
+                        aria-label={`Exibir imagem ${index + 1} de ${imagensProduto.length}`}
+                        aria-pressed={imagemSelecionada === index}
+                        className={`overflow-hidden border-2 bg-white/5 transition ${
+                          imagemSelecionada === index
+                            ? "border-primary opacity-100"
+                            : "border-surface-contrast/15 opacity-65 hover:border-surface-contrast/60 hover:opacity-100"
+                        }`}
+                      >
+                        <img
+                          src={imagem.url}
+                          alt={imagem.alt}
+                          loading="lazy"
+                          className="aspect-[4/3] w-full object-contain"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-industrial/60 to-transparent" />
               </div>
             </div>
           </div>
