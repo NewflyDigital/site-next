@@ -177,7 +177,7 @@ export default function Rodape() {
           <span>Desenvolvido por</span>
 
           <a
-            href="https://newfly.com.br"
+            href="https://newflydigital.com.br"
             target="_blank"
             rel="noopener noreferrer"
             className="transition-opacity hover:opacity-80"
