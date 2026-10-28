@@ -26,7 +26,7 @@ const FOOTER_COLUMNS = [
 const SOCIAL_LINKS = [
   {
     name: "LinkedIn",
-    href: "https://www.linkedin.com/company/next-implementos/",
+    href: "https://www.linkedin.com/company/next-implementos/?originalSubdomain=br",
     image: "/linkedin-branco.png",
   },
   {
@@ -36,8 +36,18 @@ const SOCIAL_LINKS = [
   },
   {
     name: "Instagram",
-    href: "https://www.instagram.com/p/DfC5fuvCsFH/",
+    href: "https://www.instagram.com/nextimplementos_",
     image: "/instagram-branco.png",
+  },
+  {
+    name: "TikTok",
+    href: "https://www.tiktok.com/@nextimplementos",
+    image: "/tiktok-branco.png",
+  },
+  {
+    name: "YouTube",
+    href: "https://www.youtube.com/@NEXTIMPLEMENTOSRODOVIARIOS",
+    image: "/youtube-branco.png",
   },
 ];
 
