@@ -125,10 +125,17 @@ export default function Rodape() {
             </Link>
 
             <Link
-              href="/pos-vendas"
+              href="/pos-venda"
               className="mt-4 flex items-center gap-2 text-sm opacity-65 transition-colors hover:text-primary"
             >
               Pós-vendas
+              <span aria-hidden="true">↗</span>
+            </Link>
+            <Link
+              href="https://next-implementos.factorialhr.com.br/"
+              className="mt-4 flex items-center gap-2 text-sm opacity-65 transition-colors hover:text-primary"
+            >
+              Trabalhe Conosco
               <span aria-hidden="true">↗</span>
             </Link>
           </div>
@@ -176,7 +183,7 @@ export default function Rodape() {
             className="transition-opacity hover:opacity-80"
             aria-label="Newfly"
           >
-            <img src="/newfly.png" alt="Newfly" className="w-20" />
+            <img src="/newfly.png" alt="Newfly" className="w-40" />
           </a>
         </div>
       </div>
