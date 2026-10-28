@@ -173,17 +173,17 @@ export default function Rodape() {
         </div>
 
         {/* Crédito */}
-        <div className="mt-6 flex items-center justify-center gap-2 border-t border-surface-contrast/10 pt-5 text-xs opacity-45">
+        <div className="mt-6 flex items-center justify-center gap-2 border-t pt-5 text-xs">
           <span>Desenvolvido por</span>
 
           <a
             href="https://newflydigital.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-opacity hover:opacity-80"
+            className=""
             aria-label="Newfly"
           >
-            <img src="/newfly.png" alt="Newfly" className="w-40" />
+            <img src="/newfly.png" alt="Newfly" className="w-30" />
           </a>
         </div>
       </div>
