@@ -118,6 +118,16 @@ const menuItems = [
     icon: StarIcon,
   },
   {
+    label: "Representantes",
+    href: "/admin/representantes",
+    icon: StarIcon,
+  },
+  {
+    label: "Pop Up",
+    href: "/admin/popup",
+    icon: StarIcon,
+  },
+  {
     label: "Quem Somos",
     href: "/admin/quem-somos",
     icon: BusinessIcon,

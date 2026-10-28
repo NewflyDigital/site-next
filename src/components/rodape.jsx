@@ -23,6 +23,24 @@ const FOOTER_COLUMNS = [
   },
 ];
 
+const SOCIAL_LINKS = [
+  {
+    name: "LinkedIn",
+    href: "https://www.linkedin.com/company/next-implementos/",
+    image: "/linkedin-branco.png",
+  },
+  {
+    name: "Facebook",
+    href: "https://www.facebook.com/nextimplementos",
+    image: "/facebook-branco.png",
+  },
+  {
+    name: "Instagram",
+    href: "https://www.instagram.com/p/DfC5fuvCsFH/",
+    image: "/instagram-branco.png",
+  },
+];
+
 export default function Rodape() {
   return (
     <footer className="bg-industrial px-5 pb-8 pt-16 text-surface-contrast lg:px-10 lg:pt-20">
@@ -44,6 +62,28 @@ export default function Rodape() {
               Engenharia brasileira para operações que exigem segurança,
               produtividade e confiança.
             </p>
+
+            <div className="mt-6 flex items-center gap-4">
+              {SOCIAL_LINKS.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Acesse a NEXT Implementos no ${social.name}`}
+                  className="inline-flex items-center justify-center opacity-75 transition-opacity hover:opacity-100"
+                >
+                  <img
+                    src={social.image}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-6 w-6 object-contain"
+                    width="24"
+                    height="24"
+                  />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Navegação */}

@@ -264,6 +264,15 @@ export default function Menu() {
               className={`transition-transform ${openLine ? "rotate-180" : ""}`}
             />
           </Link>
+          <Link
+            href="/representantes"
+            onClick={closeMenus}
+            className={`text-sm transition-colors hover:text-[#d90820] ${
+              pathname === "/representantes" ? "text-[#d90820]" : "text-white"
+            }`}
+          >
+            Representantes
+          </Link>
 
           <Link
             href="/contato"
@@ -541,6 +550,13 @@ export default function Menu() {
                 className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors"
               >
                 Pós-venda
+              </Link>
+              <Link
+                href="/representantes"
+                onClick={closeMenus}
+                className="border-b border-white/10 py-5 font-bold uppercase text-white transition-colors hover:text-[#d90820]"
+              >
+                Representantes
               </Link>
 
               <Link

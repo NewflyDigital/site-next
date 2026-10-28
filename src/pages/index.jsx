@@ -22,6 +22,8 @@ import Whats from "../components/whats";
 
 import { lineInfo, products } from "../../lib/catalog";
 
+import PopupPromocional from "../components/PopupPromocional";
+
 const heroImage = "/static/images/next-hero.jpg";
 const factoryImage = "/static/images/next-factory.jpg";
 const engineeringImage = "/static/images/next-engineering.jpg";
@@ -234,6 +236,8 @@ export default function Home() {
       </Head>
 
       <Menu />
+
+      <PopupPromocional />
 
       <main>
         {/* HERO */}
